@@ -7,222 +7,167 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model announcement {
-  id        Int      @id @default(autoincrement())
-  title     String
-  message   String
-  createdAt DateTime @default(now())
-}
-
-model cart {
-  id       Int        @id @default(autoincrement())
-  userId   Int        @unique(map: "Cart_userId_key")
-  user     user       @relation(fields: [userId], references: [id], map: "Cart_userId_fkey")
-  cartitem cartitem[]
-}
-
-model cartitem {
-  id        Int     @id @default(autoincrement())
-  cartId    Int
-  productId Int
-  quantity  Int
-  cart      cart    @relation(fields: [cartId], references: [id], map: "CartItem_cartId_fkey")
-  product   product @relation(fields: [productId], references: [id], map: "CartItem_productId_fkey")
-
-  @@index([cartId], map: "CartItem_cartId_fkey")
-  @@index([productId], map: "CartItem_productId_fkey")
-}
-
-model chat {
-  id                       Int       @id @default(autoincrement())
-  buyerId                  Int
-  sellerId                 Int
-  productId                Int
-  createdAt                DateTime  @default(now())
-  user_chat_buyerIdTouser  user      @relation("chat_buyerIdTouser", fields: [buyerId], references: [id], map: "Chat_buyerId_fkey")
-  product                  product   @relation(fields: [productId], references: [id], map: "Chat_productId_fkey")
-  user_chat_sellerIdTouser user      @relation("chat_sellerIdTouser", fields: [sellerId], references: [id], map: "Chat_sellerId_fkey")
-  message                  message[]
-
-  @@index([buyerId], map: "Chat_buyerId_fkey")
-  @@index([productId], map: "Chat_productId_fkey")
-  @@index([sellerId], map: "Chat_sellerId_fkey")
-}
-
-model log {
-  id        Int      @id @default(autoincrement())
-  adminId   Int
-  action    String
-  targetId  Int?
-  createdAt DateTime @default(now())
-  user      user     @relation(fields: [adminId], references: [id], map: "Log_adminId_fkey")
-
-  @@index([adminId], map: "Log_adminId_fkey")
-}
-
-model message {
-  id        Int      @id @default(autoincrement())
-  chatId    Int
-  senderId  Int
-  content   String
-  createdAt DateTime @default(now())
-  chat      chat     @relation(fields: [chatId], references: [id], map: "Message_chatId_fkey")
-  user      user     @relation(fields: [senderId], references: [id], map: "Message_senderId_fkey")
-
-  @@index([chatId], map: "Message_chatId_fkey")
-  @@index([senderId], map: "Message_senderId_fkey")
-}
-
-model order {
-  id          Int          @id @default(autoincrement())
-  buyerId     Int
-  sellerId    Int
-  status      order_status @default(PENDING)
-  totalAmount Float
-  createdAt   DateTime     @default(now())
-  user        user         @relation(fields: [buyerId], references: [id], map: "Order_buyerId_fkey")
-  orderitem   orderitem[]
-  transaction transaction?
-
-  @@index([buyerId], map: "Order_buyerId_fkey")
-}
-
-model orderitem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  quantity  Int
-  price     Float
-  order     order   @relation(fields: [orderId], references: [id], map: "OrderItem_orderId_fkey")
-  product   product @relation(fields: [productId], references: [id], map: "OrderItem_productId_fkey")
-
-  @@index([orderId], map: "OrderItem_orderId_fkey")
-  @@index([productId], map: "OrderItem_productId_fkey")
-}
-model product {
-  id          Int            @id @default(autoincrement())
-  name        String
-  description String
-  price       Float
-  sellerId    Int
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime
-  category    String         
-  condition   String         
-  location    String         
-  image       String       
-  cartitem    cartitem[]
-  chat        chat[]
-  orderitem   orderitem[]
-  user        user           @relation(fields: [sellerId], references: [id], map: "Product_sellerId_fkey")
-  report      report[]
-  wishlist    wishlist[]
-
-  @@index([sellerId], map: "Product_sellerId_fkey")
-}
-
-
-model report {
-  id                               Int           @id @default(autoincrement())
-  reporterId                       Int
-  reportedUserId                   Int
-  productId                        Int?
-  reason                           String
-  status                           report_status @default(PENDING)
-  createdAt                        DateTime      @default(now())
-  product                          product?      @relation(fields: [productId], references: [id], map: "Report_productId_fkey")
-  user_report_reportedUserIdTouser user          @relation("report_reportedUserIdTouser", fields: [reportedUserId], references: [id], map: "Report_reportedUserId_fkey")
-  user_report_reporterIdTouser     user          @relation("report_reporterIdTouser", fields: [reporterId], references: [id], map: "Report_reporterId_fkey")
-
-  @@index([productId], map: "Report_productId_fkey")
-  @@index([reportedUserId], map: "Report_reportedUserId_fkey")
-  @@index([reporterId], map: "Report_reporterId_fkey")
-}
-
-model sellerverification {
-  id        Int                       @id @default(autoincrement())
-  userId    Int                       @unique(map: "SellerVerification_userId_key")
-  status    sellerverification_status @default(PENDING)
-  documents String?                   @db.LongText
-  createdAt DateTime                  @default(now())
-  user      user                      @relation(fields: [userId], references: [id], map: "SellerVerification_userId_fkey")
-}
-
-model transaction {
-  id            Int                       @id @default(autoincrement())
-  orderId       Int                       @unique(map: "Transaction_orderId_key")
-  paymentStatus transaction_paymentStatus @default(SUCCESS)
-  paymentMethod String
-  createdAt     DateTime                  @default(now())
-  order         order                     @relation(fields: [orderId], references: [id], map: "Transaction_orderId_fkey")
-}
-
-model user {
-  id                                 Int                 @id @default(autoincrement())
-  name                               String
-  email                              String              @unique(map: "User_email_key")
-  password                           String
-  role                               user_role           @default(USER)
-  isActive                           Boolean             @default(true)
-  createdAt                          DateTime            @default(now())
-  updatedAt                          DateTime
-  cart                               cart?
-  chat_chat_buyerIdTouser            chat[]              @relation("chat_buyerIdTouser")
-  chat_chat_sellerIdTouser           chat[]              @relation("chat_sellerIdTouser")
-  log                                log[]
-  message                            message[]
-  order                              order[]
-  product                            product[]
-  report_report_reportedUserIdTouser report[]            @relation("report_reportedUserIdTouser")
-  report_report_reporterIdTouser     report[]            @relation("report_reporterIdTouser")
-  sellerverification                 sellerverification?
-  wishlist                           wishlist[]
-}
-
-model wishlist {
-  id        Int     @id @default(autoincrement())
-  userId    Int
-  productId Int
-  product   product @relation(fields: [productId], references: [id], map: "Wishlist_productId_fkey")
-  user      user    @relation(fields: [userId], references: [id], map: "Wishlist_userId_fkey")
-
-  @@index([productId], map: "Wishlist_productId_fkey")
-  @@index([userId], map: "Wishlist_userId_fkey")
-}
-
-enum sellerverification_status {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum transaction_paymentStatus {
-  SUCCESS
-  FAILED
-  REFUNDED
-}
-
-enum order_status {
-  PENDING
-  PAID
-  CANCELLED
-  REFUNDED
-}
-
-enum user_role {
-  ADMIN
+enum Role {
   USER
+  ADMIN
 }
 
-enum product_status {
-  PENDING
-  APPROVED
-  REJECTED
-  FLAGGED
+model User {
+  id         Int          @id @default(autoincrement())
+  name       String
+  email      String       @unique
+  password   String
+  bio        String?
+  image      String?
+  location   String?      
+  role       Role         @default(USER)
+
+  questions  Question[]
+  answers    Answer[]
+  comments   Comment[]
+  qComments  QComment[]
+  votes      Vote[]
+  qVotes     QuestionVote[]
+  bookmarks  Bookmark[]
+  reports    Report[]
+  hidden     NotInterested[]
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 }
 
-enum report_status {
-  PENDING
-  RESOLVED
-  REJECTED
+model Question {
+  id         Int             @id @default(autoincrement())
+  title      String
+  content    String?
+  authorId   Int
+  author     User            @relation(fields: [authorId], references: [id])
+
+  answers    Answer[]
+  comments   QComment[]
+  votes      QuestionVote[]
+  bookmarks  Bookmark[]
+  topics     QuestionTopic[]
+  reports    Report[]
+  hidden     NotInterested[]
+
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+model Answer {
+  id         Int       @id @default(autoincrement())
+  content    String
+  questionId Int
+  question   Question  @relation(fields: [questionId], references: [id])
+  authorId   Int
+  author     User      @relation(fields: [authorId], references: [id])
+
+  comments   Comment[]
+  votes      Vote[]
+  reports    Report[]
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+  answerId  Int
+  answer    Answer   @relation(fields: [answerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model QComment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vote {
+  id        Int     @id @default(autoincrement())
+  value     Int     // 1 = upvote, -1 = downvote
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+  answerId  Int
+  answer    Answer  @relation(fields: [answerId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model QuestionVote {
+  id         Int      @id @default(autoincrement())
+  value      Int      // 1 = upvote, -1 = downvote
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id])
+
+  createdAt  DateTime @default(now())
+}
+
+model Bookmark {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, questionId]) // prevent duplicate bookmarks
+}
+
+model Topic {
+  id        Int             @id @default(autoincrement())
+  name      String          @unique
+  questions QuestionTopic[]
+
+  createdAt DateTime        @default(now())
+}
+
+model QuestionTopic {
+  questionId Int
+  topicId    Int
+
+  question   Question @relation(fields: [questionId], references: [id])
+  topic      Topic    @relation(fields: [topicId], references: [id])
+
+  @@id([questionId, topicId])
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  reason     String
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  questionId Int?
+  question   Question? @relation(fields: [questionId], references: [id])
+  answerId   Int?
+  answer     Answer?   @relation(fields: [answerId], references: [id])
+
+  createdAt  DateTime @default(now())
+}
+
+model NotInterested {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, questionId]) // prevent duplicate "not interested"
 }
