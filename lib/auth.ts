@@ -13,3 +13,19 @@ export function verifyToken(token: string): JwtPayload | null {
     return null;
   }
 }
+
+export function getUserFromRequest(req: Request) {
+  try {
+    const cookieHeader = req.headers.get("cookie") ?? "";
+    const cookies = Object.fromEntries(
+      cookieHeader.split("; ").map((c) => c.split("="))
+    );
+    const token = cookies["token"];
+    if (!token) return null;
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    return { id: decoded.id as number, role: decoded.role as string };
+  } catch {
+    return null;
+  }
+}

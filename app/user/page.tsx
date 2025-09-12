@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import Navbar from "@/components/navbar"
 
 export default function DashboardPage() {
   const [userData, setUserData] = useState<{ id?: string; role?: string }>({})
@@ -39,8 +40,22 @@ export default function DashboardPage() {
   }
 
   return (
+    
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-16 px-4">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-4xl space-y-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.5 }} 
+        className="w-full max-w-4xl space-y-6"
+      >
+            <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Navbar on top */}
+      <Navbar />
+
+      <main className="flex-1 flex items-center justify-center p-6">
+        <h1 className="text-2xl font-bold">Welcome to User Dashboard</h1>
+      </main>
+    </div>
         
         {/* Welcome Card */}
         <Card className="border-gray-200 bg-white shadow-md">
@@ -84,6 +99,13 @@ export default function DashboardPage() {
             <Button className="bg-amber-600 hover:bg-amber-700 text-white w-full h-11">View Reports</Button>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full h-11">Notifications</Button>
             <Button className="bg-purple-600 hover:bg-purple-700 text-white w-full h-11">Support</Button>
+            {/* New Ask Question Button */}
+            <Button 
+              onClick={() => router.push("/questions/ask")} 
+              className="col-span-1 sm:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white w-full h-11"
+            >
+              + Ask a Question
+            </Button>
           </CardContent>
         </Card>
 
@@ -91,3 +113,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+
