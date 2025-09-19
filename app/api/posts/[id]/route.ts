@@ -1,4 +1,3 @@
-// app/api/posts/[id]/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import fs from "fs";
@@ -24,10 +23,22 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try {
     const post = await prisma.post.findUnique({
       where: { id },
-      include: { images: true, user: true, group: true, comments: true, votes: true },
+      include: {
+        images: true,
+        user: true,
+        group: true,
+        comments: true,
+        votes: true,
+      },
     });
-    if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(post);
+    if (!post)
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    // ✅ Add upvotes & downvotes to single post
+    const upvotes = post.votes.filter((v) => v.value === 1).length;
+    const downvotes = post.votes.filter((v) => v.value === -1).length;
+
+    return NextResponse.json({ ...post, upvotes, downvotes });
   } catch (error) {
     console.error("GET /api/posts/[id] error:", error);
     return NextResponse.json({ error: "Failed to fetch post" }, { status: 500 });
@@ -41,7 +52,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const { title, content, visibility, images = [] } = body;
 
     // Find existing images to remove files
-    const existingImages = await prisma.postImage.findMany({ where: { postId: id } });
+    const existingImages = await prisma.postImage.findMany({
+      where: { postId: id },
+    });
     for (const img of existingImages) removeFileIfUploadsUrl(img.url);
 
     // Remove DB image records for this post
@@ -74,10 +87,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         visibility,
         images: { create: uploadedUrls.map((url) => ({ url })) },
       },
-      include: { images: true },
+      include: {
+        images: true,
+        votes: true,
+      },
     });
 
-    return NextResponse.json(post);
+    // ✅ Add upvotes & downvotes to the updated post
+    const upvotes = post.votes.filter((v) => v.value === 1).length;
+    const downvotes = post.votes.filter((v) => v.value === -1).length;
+
+    return NextResponse.json({ ...post, upvotes, downvotes });
   } catch (error) {
     console.error("PUT /api/posts/[id] error:", error);
     return NextResponse.json({ error: "Failed to update post" }, { status: 500 });
@@ -91,7 +111,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const existingImages = await prisma.postImage.findMany({ where: { postId: id } });
     for (const img of existingImages) removeFileIfUploadsUrl(img.url);
 
-    // delete the post (this will cascade if set in schema or delete images explicitly)
+    // delete the post
     await prisma.post.delete({ where: { id } });
     return NextResponse.json({ message: "Post deleted" });
   } catch (error) {

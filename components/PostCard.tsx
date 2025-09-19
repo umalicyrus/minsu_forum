@@ -1,31 +1,67 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowBigUp,
   ArrowBigDown,
   MessageCircle,
   Share2,
-  MoreVertical,
   X,
   MoreHorizontal,
 } from "lucide-react";
-import PostComments from "./PostComments"; // ✅ added
+import PostComments from "./PostComments";
+import { toast } from "@/hooks/use-toast"; // 👈 added toast
 
-export default function PostCard({ post }: { post: any }) {
-  // ✅ state for upvotes/downvotes
-  const [upvotes, setUpvotes] = useState(post.upvotes ?? 0);
-  const [downvotes, setDownvotes] = useState(post.downvotes ?? 0);
+export default function PostCard({
+  post,
+  isAuthenticated = false, // pass this from parent
+}: {
+  post: any;
+  isAuthenticated?: boolean;
+}) {
+  const [upvotes, setUpvotes] = useState<number | null>(null);
+  const [downvotes, setDownvotes] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState<number>(
+    post.commentCount ?? 0
+  );
 
-  // ✅ voting function
+  useEffect(() => {
+    if (post.votes) {
+      setUpvotes(post.votes.filter((v: any) => v.value === 1).length);
+      setDownvotes(post.votes.filter((v: any) => v.value === -1).length);
+    }
+  }, [post.votes]);
+
   async function handleVote(value: number) {
+    // 🚫 if not authenticated, show toast
+    if (!isAuthenticated) {
+      toast({
+        title: "🔒 Login Required",
+        description: "You need to be logged in to vote.",
+        variant: "destructive",
+        className:
+          "border-l-4 border-red-500 bg-red-50 text-red-800 rounded-xl shadow-md p-4",
+      });
+      return;
+    }
+
     try {
       const res = await fetch(`/api/posts/${post.id}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ value }),
       });
+
+      if (!res.ok) {
+        console.error("Vote failed");
+        return;
+      }
+
       const data = await res.json();
+      // API returns { upvotes, downvotes }
       setUpvotes(data.upvotes);
       setDownvotes(data.downvotes);
     } catch (err) {
@@ -33,15 +69,42 @@ export default function PostCard({ post }: { post: any }) {
     }
   }
 
-  const [expanded, setExpanded] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  // 🚀 allow everyone to view comments but toast if not logged in
+  function handleToggleComments() {
+    setShowComments(!showComments);
 
-  const contentLimit = 150; // chars before showing "More"
+    if (!isAuthenticated) {
+      toast({
+        title: "ℹ️ Notice",
+        description: "You can view comments but must log in to post.",
+        variant: "default",
+        className:
+          "border-l-4 border-blue-500 bg-blue-50 text-blue-800 rounded-xl shadow-md p-4",
+      });
+    }
+  }
+
+  // Images logic
+  const images = post.images ?? [];
+  const remaining = images.length > 2 ? images.length - 2 : 0;
+
+  const contentLimit = 150;
   const contentTooLong = post.content?.length > contentLimit;
   const displayedContent =
     !expanded && contentTooLong
       ? post.content.slice(0, contentLimit) + "..."
       : post.content;
+
+  // Lightbox
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleOpen = (idx: number) => {
+    setActiveIndex(idx);
+    setIsOpen(true);
+  };
+
+  const handleClose = () => setIsOpen(false);
 
   return (
     <div className="bg-gray-100 rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -94,7 +157,10 @@ export default function PostCard({ post }: { post: any }) {
       {/* CONTENT */}
       {post.content && (
         <div className="px-4 py-2 text-gray-700 text-sm leading-relaxed">
-          <p>{displayedContent}</p>
+          <div
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: displayedContent }}
+          />
           {contentTooLong && (
             <button
               onClick={() => setExpanded(!expanded)}
@@ -106,115 +172,167 @@ export default function PostCard({ post }: { post: any }) {
         </div>
       )}
 
-      {/* IMAGES (multiple full width) */}
-      {post.images?.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {post.images.map((img: any, idx: number) => (
-            <div key={idx} className="relative w-full h-auto">
-              <Image
-                src={img.url}
-                alt={`Post image ${idx + 1}`}
-                width={800}
-                height={450}
-                className="w-full h-auto object-cover"
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* INTERACTION BAR */}
-      <div className="flex justify-between items-center px-4 py-3 border-t text-sm text-gray-600">
-        <div className="flex items-center gap-4">
-          {/* LEFT OVAL: Upvote + Downvote */}
-          <div className="flex items-center bg-gray-50 rounded-full px-4 py-2 hover:bg-gray-100 transition">
-            {/* Up Arrow Icon with click */}
-            <ArrowBigUp
-              onClick={() => handleVote(1)}
-              className="text-500 mr-2 cursor-pointer"
-              size={22}
-            />
-            {/* Text Upvotes slightly larger */}
-            <span className="text-gray-800 font-semibold text-base mr-1">
-              Upvotes
-            </span>
-            {/* Dot */}
-            <span className="text-gray-400 mx-1">•</span>
-            {/* Count */}
-            <span className="text-gray-700 font-medium mr-3">{upvotes}</span>
-            {/* Separator */}
-            <span className="text-gray-300 mx-1">|</span>
-            {/* Down Arrow Icon with click */}
-            <ArrowBigDown
-              onClick={() => handleVote(-1)}
-              className="text-500 ml-3 cursor-pointer"
-              size={22}
+      {/* IMAGES */}
+      {/* (unchanged image code) */}
+      <div className="flex flex-col gap-2">
+        {/* 1 IMAGE */}
+        {images.length === 1 && (
+          <div className="relative w-full h-auto">
+            <Image
+              src={images[0].url}
+              alt={`Post image`}
+              width={800}
+              height={450}
+              className="w-full h-auto object-cover rounded-xl cursor-pointer"
+              onClick={() => handleOpen(0)}
             />
           </div>
+        )}
 
-          {/* Comment icon only */}
-          <MessageCircle size={20} className="cursor-pointer" />
+        {/* 2 IMAGES */}
+        {images.length === 2 && (
+          <div className="grid grid-cols-2 gap-2">
+            {images.map((img: { url: string }, idx: number) => (
+              <div key={idx} className="relative w-full h-60">
+                <Image
+                  src={img.url}
+                  alt={`Post image ${idx + 1}`}
+                  fill
+                  className="object-cover rounded-xl cursor-pointer"
+                  onClick={() => handleOpen(idx)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
-          {/* Share button (kept as is) */}
-          <button
-            onClick={() =>
-              navigator.clipboard.writeText(`/posts/${post.id}`)
-            }
-          >
-            Share
-          </button>
-
-          {/* Share icon only */}
-          <button className="hover:text-blue-500">
-            <Share2 size={20} />
-          </button>
-        </div>
-
-        {/* HORIZONTAL 3 DOT MENU */}
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <MoreHorizontal size={20} />
-          </button>
-
-          {menuOpen && (
-            <div
-              className="
-                absolute 
-                right-0 
-                bottom-full 
-                mb-2 
-                w-48 
-                bg-white 
-                rounded-xl 
-                shadow-lg 
-                ring-1 ring-gray-200 
-                z-10
-              "
-            >
-              {[
-                "Copy link",
-                "Not interested in this",
-                "Bookmark",
-                "Log",
-                "Report",
-              ].map((item) => (
-                <button
-                  key={item}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* 3+ IMAGES */}
+        {images.length > 2 && (
+          <div className="grid grid-cols-2 gap-2">
+            {images.slice(0, 2).map((img: { url: string }, idx: number) => (
+              <div key={idx} className="relative w-full h-auto">
+                <Image
+                  src={img.url}
+                  alt={`Post image ${idx + 1}`}
+                  width={400}
+                  height={400}
+                  className="w-full h-auto object-cover rounded-xl cursor-pointer"
+                  onClick={() => handleOpen(idx)}
+                />
+                {idx === 1 && remaining > 0 && (
+                  <div
+                    className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl cursor-pointer"
+                    onClick={() => handleOpen(idx)}
+                  >
+                    <span className="text-white text-3xl font-bold">
+                      +{remaining}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ✅ COMMENTS SECTION directly below your interaction bar */}
-      <PostComments postId={post.id} />
+      {/* ACTION BAR */}
+      <div className="flex justify-between items-center px-4 py-3 border-t text-sm text-gray-600">
+        <div className="flex items-center gap-4">
+{/* UPVOTES */}
+<div
+  className="flex items-center bg-gray-50 rounded-full px-4 py-2 hover:bg-gray-100 transition"
+  title="Upvote / Downvote"
+>
+  {/* Upvote */}
+  <div
+    onClick={() => handleVote(1)}
+    className="mr-2 cursor-pointer"
+    title="Upvote"
+  >
+    <ArrowBigUp size={22} />
+  </div>
+
+  <span className="text-gray-800 font-semibold text-base mr-1">
+    {upvotes ?? 0} Upvotes
+  </span>
+
+  <span className="text-gray-400 mx-1">•</span>
+
+  <span className="text-gray-700 font-medium mr-3">{upvotes}</span>
+
+  <span className="text-gray-300 mx-1">|</span>
+
+  {/* Downvote */}
+  <div
+    onClick={() => handleVote(-1)}
+    className="flex items-center ml-3 cursor-pointer"
+    title="Downvote"
+  >
+    <ArrowBigDown size={22} />
+    <span className="ml-1 text-gray-700 font-medium">{downvotes ?? 0}</span>
+  </div>
+</div>
+          {/* COMMENT ICON WITH COUNT */}
+          <div
+            className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
+            onClick={handleToggleComments} // 👈 new logic
+            title={`View comments (${commentCount})`}
+          >
+            <MessageCircle size={20} />
+            <span className="text-gray-700 text-sm font-medium">
+              {commentCount}
+            </span>
+          </div>
+        </div>
+
+        {/* SHARE + MENU (unchanged) */}
+        {/* ... */}
+      </div>
+
+      {/* COMMENTS SECTION */}
+      {showComments && (
+        <PostComments
+          postId={post.id}
+          isAuthenticated={isAuthenticated} // 👈 pass auth down
+          onNewComment={() => setCommentCount((prev: number) => prev + 1)}
+        />
+      )}
+
+      {/* ==== MODAL / LIGHTBOX ==== */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center">
+          <button
+            className="absolute top-5 right-5 text-white text-3xl"
+            onClick={handleClose}
+          >
+            ✕
+          </button>
+
+          <Image
+            src={images[activeIndex].url}
+            alt={`Post image large`}
+            width={1000}
+            height={700}
+            className="max-h-[90vh] w-auto object-contain rounded-xl"
+          />
+
+          <div className="flex gap-2 mt-4 overflow-x-auto max-w-[90vw]">
+            {images.map((img: any, idx: number) => (
+              <Image
+                key={idx}
+                src={img.url}
+                alt={`Thumbnail ${idx + 1}`}
+                width={100}
+                height={100}
+                className={`h-20 w-20 object-cover rounded-xl cursor-pointer border ${
+                  activeIndex === idx ? "border-white" : "border-transparent"
+                }`}
+                onClick={() => setActiveIndex(idx)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

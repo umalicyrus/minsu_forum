@@ -1,50 +1,41 @@
-// ✅ app/api/posts/[id]/comments/route.ts
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
+import { getUserFromRequest } from "@/lib/auth"; // adjust path if needed
 
-// ───────────── POST COMMENT ─────────────
+// ─────────────────────── POST COMMENT ───────────────────────
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // because of Next.js 15
 ) {
-  const { id } = params; // ✅ FIXED
+  const { id } = await context.params; // await because it's a promise
   const postId = parseInt(id, 10);
-
   const { content } = await req.json();
 
-  const session = await getServerSession();
-  if (!session?.user?.email) {
+  // ✅ Use your own JWT-based auth
+  const user = getUserFromRequest(req);
+  if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // find user
-  const dbUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
-  if (!dbUser) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
-  // create comment + include author for frontend
+  // create the comment
   const comment = await prisma.postComment.create({
     data: {
       content,
-      authorId: dbUser.id,
+      authorId: user.id, // comes from your JWT
       postId,
     },
-    include: { author: true }, // ✅ include author for display
+    include: { author: true },
   });
 
   return NextResponse.json(comment);
 }
 
-// ───────────── GET COMMENTS ─────────────
+// ─────────────────────── GET COMMENTS ───────────────────────
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params; // ✅ FIXED
+  const { id } = await context.params;
   const postId = parseInt(id, 10);
 
   const comments = await prisma.postComment.findMany({

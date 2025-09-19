@@ -29,8 +29,8 @@ export default function Navbar() {
           <nav className="hidden md:flex items-center space-x-4">
             <NavLink href="/" label="Home" />
             <NavLink href="/marketplace" label="Following" />
-            <NavLink href="/questions/ask" label="Answer" />
-            <NavLink href="/forum" label="Forum" />
+            <NavLink href="/questions/ask" label="Question" />
+            <NavLink href="/posts" label="Forum" />
 
             {/* Search Bar (static) */}
             <div className="relative ml-2">

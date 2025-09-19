@@ -1,4 +1,3 @@
-// app/posts/new/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -29,46 +28,78 @@ export default function NewPostPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl mx-auto mt-8 space-y-4">
-      <h1 className="text-2xl font-bold">Create a New Post</h1>
-
-      <input
-        placeholder="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="w-full border rounded-lg p-2"
-      />
-
-      <textarea
-        placeholder="Content"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="w-full border rounded-lg p-2"
-        rows={4}
-      />
-
-      <select
-        value={visibility}
-        onChange={(e) => setVisibility(e.target.value)}
-        className="w-full border rounded-lg p-2"
+    <div className="flex justify-center mt-10">
+      <form
+        onSubmit={handleSubmit}
+        className="max-w-lg w-full p-6 rounded-xl bg-green-50 border border-green-200 shadow-lg space-y-5"
       >
-        <option value="public">Public</option>
-        <option value="group">Group</option>
-      </select>
+        {/* Header */}
+        <h1 className="text-lg font-semibold text-green-800">
+          ✏️ Create a New Post
+        </h1>
 
-      <input
-        placeholder="Image URLs (comma separated)"
-        value={images}
-        onChange={(e) => setImages(e.target.value)}
-        className="w-full border rounded-lg p-2"
-      />
+        {/* Tips Box */}
+        <div className="bg-green-100 border border-green-200 rounded-lg p-4 text-sm text-green-800 space-y-1">
+          <p className="font-medium">💡 Tips to make a great post:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Write a clear and descriptive title</li>
+            <li>Provide enough details in the content</li>
+            <li>Add images (optional) for better clarity</li>
+          </ul>
+        </div>
 
-      <button
-        type="submit"
-        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
-      >
-        Create Post
-      </button>
-    </form>
+        {/* Title */}
+        <input
+          placeholder='Start your title with "What", "How", "Why", etc.'
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="rounded-full bg-white border border-green-300 px-4 py-2 w-full focus:ring-2 focus:ring-green-400"
+        />
+
+        {/* Content */}
+        <textarea
+          placeholder="Write your content here..."
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          className="rounded-lg bg-white border border-green-300 px-4 py-2 w-full focus:ring-2 focus:ring-green-400"
+          rows={4}
+        />
+
+        {/* Visibility */}
+        <select
+          value={visibility}
+          onChange={(e) => setVisibility(e.target.value)}
+          className="rounded-lg bg-white border border-green-300 px-4 py-2 w-full focus:ring-2 focus:ring-green-400"
+        >
+          <option value="public">Public</option>
+          <option value="group">Group Only</option>
+        </select>
+
+        {/* Images */}
+        <input
+          placeholder="Image URLs (comma separated)"
+          value={images}
+          onChange={(e) => setImages(e.target.value)}
+          className="rounded-lg bg-white border border-green-300 px-4 py-2 w-full focus:ring-2 focus:ring-green-400"
+        />
+
+        {/* Buttons */}
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="border-green-400 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg border"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+          >
+            Create Post
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

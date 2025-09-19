@@ -1,19 +1,27 @@
-// components/Comments.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Comments({
   postId,
-  comments,
+  comments = [],
 }: {
   postId: number;
-  comments: any[];
+  comments?: any[];
 }) {
   const [allComments, setAllComments] = useState(comments);
   const [text, setText] = useState("");
 
-  async function addComment(e: any) {
+  // Optional: load comments from API if not provided
+  useEffect(() => {
+    if (!comments.length) {
+      fetch(`/api/posts/${postId}/comments`)
+        .then((res) => res.json())
+        .then((data) => setAllComments(data));
+    }
+  }, [postId]);
+
+  async function addComment(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
 
@@ -22,12 +30,15 @@ export default function Comments({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: text }),
     });
-    const newComment = await res.json();
 
-    if (!newComment.error) {
-      setAllComments([...allComments, newComment]);
-      setText("");
+    if (!res.ok) {
+      console.error(await res.json());
+      return;
     }
+
+    const newComment = await res.json();
+    setAllComments([newComment, ...allComments]); // new first
+    setText("");
   }
 
   return (
@@ -45,7 +56,7 @@ export default function Comments({
           >
             <div className="text-gray-800">{c.content}</div>
             <div className="text-gray-500 text-xs mt-1">
-              by {c.user?.name ?? "Anonymous"}
+              by {c.author?.name ?? "Anonymous"}
             </div>
           </div>
         ))}

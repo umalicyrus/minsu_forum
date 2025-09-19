@@ -1,4 +1,3 @@
-// app/api/posts/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import fs from "fs";
@@ -9,11 +8,28 @@ const uploadsDir = path.join(process.cwd(), "public", "uploads");
 export async function GET(req: Request) {
   try {
     const posts = await prisma.post.findMany({
-      include: { images: true, user: true, group: true, comments: true, votes: true },
+      include: {
+        images: true,
+        user: true,
+        group: true,
+        comments: true,
+        votes: true,
+      },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(posts);
+    // ✅ Add upvotes & downvotes to each post
+    const postsWithCounts = posts.map((post) => {
+      const upvotes = post.votes.filter((v) => v.value === 1).length;
+      const downvotes = post.votes.filter((v) => v.value === -1).length;
+      return {
+        ...post,
+        upvotes,
+        downvotes,
+      };
+    });
+
+    return NextResponse.json(postsWithCounts);
   } catch (error) {
     console.error("GET /api/posts error:", error);
     return NextResponse.json({ error: "Failed to fetch posts" }, { status: 500 });
@@ -38,10 +54,8 @@ export async function POST(req: Request) {
         const fileName = `post_${Date.now()}_${i}.png`;
         const filePath = path.join(uploadsDir, fileName);
         fs.writeFileSync(filePath, buffer);
-        // Use relative URL — Next serves /public automatically
         uploadedUrls.push(`/uploads/${fileName}`);
       } else if (typeof image === "string" && image.length > 0) {
-        // Already a URL (keep as-is)
         uploadedUrls.push(image);
       }
     }
@@ -53,12 +67,24 @@ export async function POST(req: Request) {
         visibility,
         userId,
         groupId,
-        images: { create: uploadedUrls.map((url) => ({ url })) },
+        images: {
+          create: uploadedUrls.map((url) => ({ url })),
+        },
       },
-      include: { images: true, user: true, group: true, comments: true, votes: true },
+      include: {
+        images: true,
+        user: true,
+        group: true,
+        comments: true,
+        votes: true,
+      },
     });
 
-    return NextResponse.json(newPost);
+    // ✅ Add upvotes & downvotes to the newly created post
+    const upvotes = newPost.votes.filter((v) => v.value === 1).length;
+    const downvotes = newPost.votes.filter((v) => v.value === -1).length;
+
+    return NextResponse.json({ ...newPost, upvotes, downvotes });
   } catch (error) {
     console.error("POST /api/posts error:", error);
     return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
