@@ -4,7 +4,7 @@ import { getUserFromRequest } from "@/lib/auth";
 
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } } // ✅ destructure params here
 ) {
   // 🔹 Authenticate user
   const user = getUserFromRequest(req as any);
@@ -12,7 +12,7 @@ export async function POST(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const postId = Number(context.params.id); // ✅ FIXED
+  const postId = Number(params.id); // ✅ use params.id directly
   const { value } = await req.json(); // value = 1 or -1
 
   if (![1, -1].includes(value)) {

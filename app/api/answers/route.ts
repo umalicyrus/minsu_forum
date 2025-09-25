@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth"; // adjust based on your auth setup
+import { getUserFromRequest } from "@/lib/auth"; // adjust path if needed
 
-// POST /api/answers
 export async function POST(req: Request) {
   try {
     const user = await getUserFromRequest(req);
@@ -10,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { questionId, content } = await req.json();
+    const { questionId, content, anonymous } = await req.json();
 
     if (!questionId || !content) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -21,14 +20,21 @@ export async function POST(req: Request) {
         content,
         questionId,
         authorId: user.id,
+        anonymous: !!anonymous,
+        updatedAt: new Date(),
       },
       include: {
-        author: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true, image: true } },
         question: { select: { id: true, title: true } },
       },
     });
 
-    return NextResponse.json(answer, { status: 201 });
+    const answerWithAuthor = {
+      ...answer,
+      author: answer.user,
+    };
+
+    return NextResponse.json(answerWithAuthor, { status: 201 });
   } catch (err: any) {
     console.error("Answer POST error:", err);
     return NextResponse.json({ error: "Failed to post answer" }, { status: 500 });

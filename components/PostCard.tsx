@@ -1,6 +1,7 @@
+// PostCard.tsx
 "use client";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ArrowBigUp,
   ArrowBigDown,
@@ -10,33 +11,82 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import PostComments from "./PostComments";
-import { toast } from "@/hooks/use-toast"; // 👈 added toast
+import { toast } from "@/hooks/use-toast";
+
+type PostCardProps = {
+  post: any;
+  isAuthenticated?: boolean;
+  currentUserId?: string;
+  isFollowing?: boolean;
+  onFollowToggle?: (userId: string, nowFollowing: boolean) => void;
+};
 
 export default function PostCard({
   post,
-  isAuthenticated = false, // pass this from parent
-}: {
-  post: any;
-  isAuthenticated?: boolean;
-}) {
+  isAuthenticated = false,
+  currentUserId,
+  isFollowing: propFollowing,
+  onFollowToggle,
+}: PostCardProps) {
+  // Votes
   const [upvotes, setUpvotes] = useState<number | null>(null);
   const [downvotes, setDownvotes] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Comments
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState<number>(
     post.commentCount ?? 0
   );
 
+  // Author / Follow
+  const authorId = post.user?.id?.toString();
+  // localFollowing prefers explicit prop, then backend field on post, then false
+  const [localFollowing, setLocalFollowing] = useState<boolean>(
+    propFollowing ?? post.user?.isFollowing ?? false
+  );
+  // Dropdown for confirming unfollow
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Menu (share / more)
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Lightbox
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Derived
+  const images = post.images ?? [];
+  const remaining = images.length > 2 ? images.length - 2 : 0;
+  const contentLimit = 150;
+  const contentTooLong = post.content?.length > contentLimit;
+  const displayedContent =
+    !expanded && contentTooLong
+      ? post.content.slice(0, contentLimit) + "..."
+      : post.content;
+
+  // hide follow button if user not logged in or looking at own post
+  const showFollowButton =
+    isAuthenticated && currentUserId && currentUserId !== authorId;
+
+  // sync votes
   useEffect(() => {
     if (post.votes) {
       setUpvotes(post.votes.filter((v: any) => v.value === 1).length);
       setDownvotes(post.votes.filter((v: any) => v.value === -1).length);
+    } else {
+      setUpvotes(null);
+      setDownvotes(null);
     }
   }, [post.votes]);
 
+  // keep localFollowing in sync if parent prop or post metadata changes
+  useEffect(() => {
+    setLocalFollowing(propFollowing ?? post.user?.isFollowing ?? false);
+  }, [propFollowing, post.user?.isFollowing]);
+
+  // Voting
   async function handleVote(value: number) {
-    // 🚫 if not authenticated, show toast
     if (!isAuthenticated) {
       toast({
         title: "🔒 Login Required",
@@ -61,7 +111,6 @@ export default function PostCard({
       }
 
       const data = await res.json();
-      // API returns { upvotes, downvotes }
       setUpvotes(data.upvotes);
       setDownvotes(data.downvotes);
     } catch (err) {
@@ -69,7 +118,80 @@ export default function PostCard({
     }
   }
 
-  // 🚀 allow everyone to view comments but toast if not logged in
+  // Follow (merge of your two snippets)
+  // - If not following -> POST and auto-switch
+  // - If already following -> toggle dropdown (confirm unfollow)
+  async function handleFollowToggle() {
+    if (!isAuthenticated) {
+      toast({
+        title: "🔒 Login Required",
+        description: "You need to be logged in to follow.",
+        variant: "destructive",
+      });
+      
+      return;
+    }
+
+    // If not following, follow immediately
+    if (!localFollowing) {
+      try {
+        const res = await fetch("/api/follow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ followingId: Number(post.user.id) }),
+        });
+
+        const errBody = await res.json().catch(() => null);
+        if (!res.ok) {
+          console.error("Follow request failed", errBody);
+          toast({
+            title: "Follow failed",
+            description: "Could not follow user.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setLocalFollowing(true);
+        onFollowToggle?.(authorId!, true);
+      } catch (err) {
+        console.error("Follow error", err);
+      }
+      return;
+    }
+
+    // Already following -> show/hide unfollow dropdown for confirmation
+    setShowDropdown((s) => !s);
+  }
+
+  async function handleUnfollow() {
+    try {
+      const res = await fetch("/api/follow", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ followingId: Number(post.user.id) }),
+      });
+
+      const errBody = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error("Unfollow failed", errBody);
+        toast({
+          title: "Unfollow failed",
+          description: "Could not unfollow user.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setLocalFollowing(false);
+      setShowDropdown(false);
+      onFollowToggle?.(authorId!, false);
+    } catch (err) {
+      console.error("Unfollow error", err);
+    }
+  }
+
+  // Comments: allow viewing regardless; require login to post
   function handleToggleComments() {
     setShowComments(!showComments);
 
@@ -84,27 +206,82 @@ export default function PostCard({
     }
   }
 
-  // Images logic
-  const images = post.images ?? [];
-  const remaining = images.length > 2 ? images.length - 2 : 0;
+  // Share
+  async function handleShare() {
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : undefined;
+    const url = origin ? `${origin}/posts/${post.id}` : `/posts/${post.id}`;
 
-  const contentLimit = 150;
-  const contentTooLong = post.content?.length > contentLimit;
-  const displayedContent =
-    !expanded && contentTooLong
-      ? post.content.slice(0, contentLimit) + "..."
-      : post.content;
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share({
+          title: post.title,
+          text:
+            (post.content && post.content.replace(/<[^>]+>/g, "")?.slice(0, 120)) ||
+            "",
+          url,
+        });
+      } catch (err) {
+        // user probably cancelled
+      }
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({
+          title: "Link copied",
+          description: "Post URL copied to clipboard.",
+        });
+      } catch (err) {
+        console.error("Clipboard error", err);
+      }
+    } else {
+      // fallback
+      toast({
+        title: "Can't share",
+        description: "Sharing is not available in this environment.",
+        variant: "destructive",
+      });
+    }
+  }
 
-  // Lightbox
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-
+  // Lightbox handlers
   const handleOpen = (idx: number) => {
     setActiveIndex(idx);
     setIsOpen(true);
   };
-
   const handleClose = () => setIsOpen(false);
+
+  // Simple placeholders for menu actions (non-destructive; you can wire these up)
+  function handleReport() {
+    setShowMenu(false);
+    toast({ title: "Reported", description: "Thanks — we'll review this post." });
+  }
+  function handleEdit() {
+    setShowMenu(false);
+    toast({ title: "Edit", description: "Open edit UI (implement in parent)." });
+  }
+  async function handleDelete() {
+    setShowMenu(false);
+    if (!isAuthenticated || currentUserId !== authorId) {
+      toast({
+        title: "Not allowed",
+        description: "You can only delete your own posts.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Example delete call (optional)
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast({ title: "Delete failed", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Deleted", description: "Post deleted." });
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   return (
     <div className="bg-gray-100 rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -130,25 +307,67 @@ export default function PostCard({
             </div>
           )}
 
-          {/* User name + Follow */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-bold text-gray-800">
-              {post.user?.name ?? "Anonymous"}
+          {/* Author name + small meta (optional) */}
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-900">
+              {post.user?.name ?? "Unknown"}
             </span>
-            <span className="text-gray-400">•</span>
-            <button className="text-blue-600 font-bold hover:underline">
-              Follow
-            </button>
+            {post.createdAt && (
+              <span className="text-xs text-gray-500">
+                {new Date(post.createdAt).toLocaleString()}
+              </span>
+            )}
           </div>
+
+          {/* FOLLOW BUTTON */}
+          {showFollowButton && (
+            <div className="relative ml-3">
+              {localFollowing ? (
+                <div className="relative inline-block">
+                  <button
+                    onClick={handleFollowToggle}
+                    className="text-blue-600 font-bold hover:underline px-2 py-1 rounded"
+                    aria-expanded={showDropdown}
+                    aria-controls={`unfollow-dropdown-${post.id}`}
+                  >
+                    Following
+                  </button>
+
+                  {showDropdown && (
+                    <div
+                      id={`unfollow-dropdown-${post.id}`}
+                      className="absolute left-0 top-full mt-2 bg-white border rounded shadow-lg z-20 min-w-[140px]"
+                    >
+                      <button
+                        onClick={handleUnfollow}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      >
+                        Unfollow
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={handleFollowToggle}
+                  className="text-blue-600 font-bold hover:underline px-2 py-1 rounded"
+                >
+                  Follow
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Hide (X) */}
-        <button
-          title="Hide"
-          className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
-        >
-          <X size={18} />
-        </button>
+        {/* Hide (X) + small actions */}
+        <div className="flex items-center gap-2">
+          <button
+            title="Hide"
+            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* TITLE */}
@@ -173,8 +392,7 @@ export default function PostCard({
       )}
 
       {/* IMAGES */}
-      {/* (unchanged image code) */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 px-4">
         {/* 1 IMAGE */}
         {images.length === 1 && (
           <div className="relative w-full h-auto">
@@ -238,44 +456,49 @@ export default function PostCard({
       {/* ACTION BAR */}
       <div className="flex justify-between items-center px-4 py-3 border-t text-sm text-gray-600">
         <div className="flex items-center gap-4">
-{/* UPVOTES */}
-<div
-  className="flex items-center bg-gray-50 rounded-full px-4 py-2 hover:bg-gray-100 transition"
-  title="Upvote / Downvote"
->
-  {/* Upvote */}
-  <div
-    onClick={() => handleVote(1)}
-    className="mr-2 cursor-pointer"
-    title="Upvote"
-  >
-    <ArrowBigUp size={22} />
-  </div>
+          {/* UPVOTES */}
+          <div
+            className="flex items-center bg-gray-50 rounded-full px-4 py-2 hover:bg-gray-100 transition"
+            title="Upvote / Downvote"
+          >
+            {/* Upvote */}
+            <div
+              onClick={() => handleVote(1)}
+              className="mr-2 cursor-pointer"
+              title="Upvote"
+            >
+              <ArrowBigUp size={22} />
+            </div>
 
-  <span className="text-gray-800 font-semibold text-base mr-1">
-    {upvotes ?? 0} Upvotes
-  </span>
+            <span className="text-gray-800 font-semibold text-base mr-1">
+              Upvotes
+            </span>
 
-  <span className="text-gray-400 mx-1">•</span>
+            <span className="text-gray-400 mx-1">•</span>
 
-  <span className="text-gray-700 font-medium mr-3">{upvotes}</span>
+            <span className="text-gray-700 font-medium mr-3">
+              {upvotes ?? 0}
+            </span>
 
-  <span className="text-gray-300 mx-1">|</span>
+            <span className="text-gray-300 mx-1">|</span>
 
-  {/* Downvote */}
-  <div
-    onClick={() => handleVote(-1)}
-    className="flex items-center ml-3 cursor-pointer"
-    title="Downvote"
-  >
-    <ArrowBigDown size={22} />
-    <span className="ml-1 text-gray-700 font-medium">{downvotes ?? 0}</span>
-  </div>
-</div>
+            {/* Downvote */}
+            <div
+              onClick={() => handleVote(-1)}
+              className="flex items-center ml-3 cursor-pointer"
+              title="Downvote"
+            >
+              <ArrowBigDown size={22} />
+              <span className="ml-1 text-gray-700 font-medium">
+                {downvotes ?? 0}
+              </span>
+            </div>
+          </div>
+
           {/* COMMENT ICON WITH COUNT */}
           <div
             className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
-            onClick={handleToggleComments} // 👈 new logic
+            onClick={handleToggleComments}
             title={`View comments (${commentCount})`}
           >
             <MessageCircle size={20} />
@@ -285,22 +508,68 @@ export default function PostCard({
           </div>
         </div>
 
-        {/* SHARE + MENU (unchanged) */}
-        {/* ... */}
+        {/* SHARE + MENU */}
+        <div className="flex items-center gap-3">
+          <button
+            title="Share"
+            onClick={handleShare}
+            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50"
+          >
+            <Share2 size={18} />
+          </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu((s) => !s)}
+              className="p-1 rounded hover:bg-gray-50"
+              title="More"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-2 bg-white border rounded shadow-lg z-30 min-w-[160px]">
+                {currentUserId === authorId ? (
+                  <>
+                    <button
+                      onClick={handleEdit}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    >
+                      Delete
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleReport}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  >
+                    Report
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* COMMENTS SECTION */}
       {showComments && (
         <PostComments
           postId={post.id}
-          isAuthenticated={isAuthenticated} // 👈 pass auth down
+          isAuthenticated={isAuthenticated}
           onNewComment={() => setCommentCount((prev: number) => prev + 1)}
         />
       )}
 
       {/* ==== MODAL / LIGHTBOX ==== */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center">
+      {isOpen && images[activeIndex] && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center px-4">
           <button
             className="absolute top-5 right-5 text-white text-3xl"
             onClick={handleClose}
@@ -308,27 +577,30 @@ export default function PostCard({
             ✕
           </button>
 
-          <Image
-            src={images[activeIndex].url}
-            alt={`Post image large`}
-            width={1000}
-            height={700}
-            className="max-h-[90vh] w-auto object-contain rounded-xl"
-          />
+          <div className="max-h-[90vh]">
+            <Image
+              src={images[activeIndex].url}
+              alt={`Post image large`}
+              width={1000}
+              height={700}
+              className="max-h-[90vh] w-auto object-contain rounded-xl"
+            />
+          </div>
 
           <div className="flex gap-2 mt-4 overflow-x-auto max-w-[90vw]">
             {images.map((img: any, idx: number) => (
-              <Image
-                key={idx}
-                src={img.url}
-                alt={`Thumbnail ${idx + 1}`}
-                width={100}
-                height={100}
-                className={`h-20 w-20 object-cover rounded-xl cursor-pointer border ${
-                  activeIndex === idx ? "border-white" : "border-transparent"
-                }`}
-                onClick={() => setActiveIndex(idx)}
-              />
+              <div key={idx} className="flex-shrink-0">
+                <Image
+                  src={img.url}
+                  alt={`Thumbnail ${idx + 1}`}
+                  width={100}
+                  height={100}
+                  className={`h-20 w-20 object-cover rounded-xl cursor-pointer border ${
+                    activeIndex === idx ? "border-white" : "border-transparent"
+                  }`}
+                  onClick={() => setActiveIndex(idx)}
+                />
+              </div>
             ))}
           </div>
         </div>

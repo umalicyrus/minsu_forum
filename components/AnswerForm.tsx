@@ -19,6 +19,9 @@ export default function AnswerForm({
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ✅ new state for anonymous checkbox
+  const [anonymous, setAnonymous] = useState(false);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!content.trim()) return;
@@ -28,7 +31,8 @@ export default function AnswerForm({
       const res = await fetch("/api/answers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId, content }),
+        // ✅ include anonymous in body
+        body: JSON.stringify({ questionId, content, anonymous }),
       });
 
       if (!res.ok) throw new Error("Failed to post answer");
@@ -36,6 +40,7 @@ export default function AnswerForm({
       const newAnswer: Answer = await res.json(); // ✅ expect full answer from API
 
       setContent(""); 
+      setAnonymous(false); // ✅ reset checkbox after submit
       onSuccess?.(newAnswer); // ✅ send to parent
     } catch (err) {
       console.error(err);
@@ -46,21 +51,33 @@ export default function AnswerForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 flex gap-2">
-      <input
-        type="text"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="Write your answer..."
-        className="flex-1 border rounded-lg p-2"
-      />
-      <button
-        type="submit"
-        disabled={loading}
-        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-      >
-        {loading ? "Posting..." : "Answer"}
-      </button>
+    <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Write your answer..."
+          className="flex-1 border rounded-lg p-2"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+        >
+          {loading ? "Posting..." : "Answer"}
+        </button>
+      </div>
+
+      {/* ✅ checkbox for anonymous answers */}
+      <label className="flex items-center gap-2 text-sm text-gray-600">
+        <input
+          type="checkbox"
+          checked={anonymous}
+          onChange={(e) => setAnonymous(e.target.checked)}
+        />
+        Post as Anonymous
+      </label>
     </form>
   );
 }

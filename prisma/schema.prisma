@@ -7,309 +7,289 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// ─── ENUMS ─────────────────────────────────────────────
-//
+model answer {
+  id         Int       @id @default(autoincrement())
+  content    String
+  questionId Int
+  authorId   Int
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt   
+  anonymous  Boolean   @default(false)
+  user       user      @relation(fields: [authorId], references: [id], map: "Answer_authorId_fkey")
+  question   question  @relation(fields: [questionId], references: [id], map: "Answer_questionId_fkey")
+  comment    comment[]
+  report     report[]
+  vote       vote[]
 
-enum Role {
-  USER
-  ADMIN
+  @@index([authorId], map: "Answer_authorId_fkey")
+  @@index([questionId], map: "Answer_questionId_fkey")
 }
 
-enum Visibility {
+model bookmark {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  questionId Int
+  createdAt  DateTime @default(now())
+  question   question @relation(fields: [questionId], references: [id], map: "Bookmark_questionId_fkey")
+  user       user     @relation(fields: [userId], references: [id], map: "Bookmark_userId_fkey")
+
+  @@unique([userId, questionId], map: "Bookmark_userId_questionId_key")
+  @@index([questionId], map: "Bookmark_questionId_fkey")
+}
+
+model comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  authorId  Int
+  answerId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  answer    answer   @relation(fields: [answerId], references: [id], map: "Comment_answerId_fkey")
+  user      user     @relation(fields: [authorId], references: [id], map: "Comment_authorId_fkey")
+
+  @@index([answerId], map: "Comment_answerId_fkey")
+  @@index([authorId], map: "Comment_authorId_fkey")
+}
+
+model follow {
+  id                            Int  @id @default(autoincrement())
+  followerId                    Int
+  followingId                   Int
+  user_follow_followerIdTouser  user @relation("follow_followerIdTouser", fields: [followerId], references: [id], map: "Follow_followerId_fkey")
+  user_follow_followingIdTouser user @relation("follow_followingIdTouser", fields: [followingId], references: [id], map: "Follow_followingId_fkey")
+
+  @@unique([followerId, followingId], map: "Follow_followerId_followingId_key")
+  @@index([followingId], map: "Follow_followingId_fkey")
+}
+
+model group {
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String?
+  membership  membership[]
+  post        post[]
+}
+
+model membership {
+  id      Int   @id @default(autoincrement())
+  userId  Int
+  groupId Int
+  group   group @relation(fields: [groupId], references: [id], map: "Membership_groupId_fkey")
+  user    user  @relation(fields: [userId], references: [id], map: "Membership_userId_fkey")
+
+  @@unique([userId, groupId], map: "Membership_userId_groupId_key")
+  @@index([groupId], map: "Membership_groupId_fkey")
+}
+
+model notinterested {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  questionId Int
+  createdAt  DateTime @default(now())
+  question   question @relation(fields: [questionId], references: [id], map: "NotInterested_questionId_fkey")
+  user       user     @relation(fields: [userId], references: [id], map: "NotInterested_userId_fkey")
+
+  @@unique([userId, questionId], map: "NotInterested_userId_questionId_key")
+  @@index([questionId], map: "NotInterested_questionId_fkey")
+}
+
+model post {
+  id                Int                 @id @default(autoincrement())
+  title             String
+  content           String?             @db.Text
+  visibility        post_visibility     @default(PUBLIC)
+  groupId           Int?
+  userId            Int
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  group             group?              @relation(fields: [groupId], references: [id], map: "Post_groupId_fkey")
+  user              user                @relation(fields: [userId], references: [id], map: "Post_userId_fkey")
+  postcomment       postcomment[]
+  postimage         postimage[]
+  postnotinterested postnotinterested[]
+  postvote          postvote[]
+
+  @@index([groupId], map: "Post_groupId_fkey")
+  @@index([userId], map: "Post_userId_fkey")
+}
+
+model postcomment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  postId    Int
+  authorId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  user      user     @relation(fields: [authorId], references: [id], map: "PostComment_authorId_fkey")
+  post      post     @relation(fields: [postId], references: [id], map: "PostComment_postId_fkey")
+
+  @@index([authorId], map: "PostComment_authorId_fkey")
+  @@index([postId], map: "PostComment_postId_fkey")
+}
+
+model postimage {
+  id     Int    @id @default(autoincrement())
+  url    String
+  postId Int
+  post   post   @relation(fields: [postId], references: [id], map: "PostImage_postId_fkey")
+
+  @@index([postId], map: "PostImage_postId_fkey")
+}
+
+model postnotinterested {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  createdAt DateTime @default(now())
+  post      post     @relation(fields: [postId], references: [id], map: "PostNotInterested_postId_fkey")
+  user      user     @relation(fields: [userId], references: [id], map: "PostNotInterested_userId_fkey")
+
+  @@unique([userId, postId], map: "PostNotInterested_userId_postId_key")
+  @@index([postId], map: "PostNotInterested_postId_fkey")
+}
+
+model postvote {
+  id        Int      @id @default(autoincrement())
+  value     Int
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+  post      post     @relation(fields: [postId], references: [id], map: "PostVote_postId_fkey")
+  user      user     @relation(fields: [userId], references: [id], map: "PostVote_userId_fkey")
+
+  @@unique([userId, postId], map: "PostVote_userId_postId_key")
+  @@index([postId], map: "PostVote_postId_fkey")
+}
+
+model qcomment {
+  id         Int      @id @default(autoincrement())
+  content    String
+  authorId   Int
+  questionId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  user       user     @relation(fields: [authorId], references: [id], map: "QComment_authorId_fkey")
+  question   question @relation(fields: [questionId], references: [id], map: "QComment_questionId_fkey")
+
+  @@index([authorId], map: "QComment_authorId_fkey")
+  @@index([questionId], map: "QComment_questionId_fkey")
+}
+
+model question {
+  id            Int             @id @default(autoincrement())
+  title         String
+  content       String?
+  authorId      Int
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt   // ✅ only change here
+  anonymous     Boolean         @default(false)
+  answer        answer[]
+  bookmark      bookmark[]
+  notinterested notinterested[]
+  qcomment      qcomment[]
+  user          user            @relation(fields: [authorId], references: [id], map: "Question_authorId_fkey")
+  questiontopic questiontopic[]
+  questionvote  questionvote[]
+  report        report[]
+
+  @@index([authorId], map: "Question_authorId_fkey")
+}
+
+model questiontopic {
+  questionId Int
+  topicId    Int
+  question   question @relation(fields: [questionId], references: [id], map: "QuestionTopic_questionId_fkey")
+  topic      topic    @relation(fields: [topicId], references: [id], map: "QuestionTopic_topicId_fkey")
+
+  @@id([questionId, topicId])
+  @@index([topicId], map: "QuestionTopic_topicId_fkey")
+}
+
+model questionvote {
+  id         Int      @id @default(autoincrement())
+  value      Int
+  userId     Int
+  questionId Int
+  createdAt  DateTime @default(now())
+  question   question @relation(fields: [questionId], references: [id], map: "QuestionVote_questionId_fkey")
+  user       user     @relation(fields: [userId], references: [id], map: "QuestionVote_userId_fkey")
+
+  @@unique([userId, questionId], map: "QuestionVote_userId_questionId_key")
+  @@index([questionId], map: "QuestionVote_questionId_fkey")
+}
+
+model report {
+  id         Int       @id @default(autoincrement())
+  reason     String
+  createdAt  DateTime  @default(now())
+  answerId   Int?
+  questionId Int?
+  userId     Int
+  answer     answer?   @relation(fields: [answerId], references: [id], map: "Report_answerId_fkey")
+  question   question? @relation(fields: [questionId], references: [id], map: "Report_questionId_fkey")
+  user       user      @relation(fields: [userId], references: [id], map: "Report_userId_fkey")
+
+  @@index([answerId], map: "Report_answerId_fkey")
+  @@index([questionId], map: "Report_questionId_fkey")
+  @@index([userId], map: "Report_userId_fkey")
+}
+
+model topic {
+  id            Int             @id @default(autoincrement())
+  name          String          @unique(map: "Topic_name_key")
+  createdAt     DateTime        @default(now())
+  questiontopic questiontopic[]
+}
+
+model user {
+  id                              Int                 @id @default(autoincrement())
+  name                            String
+  email                           String              @unique(map: "User_email_key")
+  password                        String
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime
+  bio                             String?
+  image                           String?
+  location                        String?
+  role                            user_role           @default(USER)
+  answer                          answer[]
+  bookmark                        bookmark[]
+  comment                         comment[]
+  follow_follow_followerIdTouser  follow[]            @relation("follow_followerIdTouser")
+  follow_follow_followingIdTouser follow[]            @relation("follow_followingIdTouser")
+  membership                      membership[]
+  notinterested                   notinterested[]
+  post                            post[]
+  postcomment                     postcomment[]
+  postnotinterested               postnotinterested[]
+  postvote                        postvote[]
+  qcomment                        qcomment[]
+  question                        question[]
+  questionvote                    questionvote[]
+  report                          report[]
+  vote                            vote[]
+}
+
+model vote {
+  id        Int      @id @default(autoincrement())
+  value     Int
+  userId    Int
+  answerId  Int
+  createdAt DateTime @default(now())
+  answer    answer   @relation(fields: [answerId], references: [id], map: "Vote_answerId_fkey")
+  user      user     @relation(fields: [userId], references: [id], map: "Vote_userId_fkey")
+
+  @@index([answerId], map: "Vote_answerId_fkey")
+  @@index([userId], map: "Vote_userId_fkey")
+}
+
+enum post_visibility {
   PUBLIC
   GROUP
   FOLLOWERS
 }
 
-//
-// ─── USER ─────────────────────────────────────────────
-//
-
-model User {
-  id       Int     @id @default(autoincrement())
-  name     String
-  email    String  @unique
-  password String
-  bio      String?
-  image    String?
-  location String?
-  role     Role    @default(USER)
-
-  // Existing Q&A relations
-  questions       Question[]
-  answers         Answer[]
-  comments        Comment[]
-  qComments       QComment[]
-  votes           Vote[]
-  qVotes          QuestionVote[]
-  bookmarks       Bookmark[]
-  reports         Report[]
-  hiddenQuestions NotInterested[]
-
-  // 🔹 Social Features
-  posts       Post[]
-  memberships Membership[]
-
-  // 👇 these two arrays are the “opposite” sides of Follow model
-  followers Follow[] @relation("UserFollowers") // people who follow me
-  following Follow[] @relation("UserFollowing") // people I follow
-
-  // 🔹 Post-related actions
-  postComments PostComment[]
-  postVotes    PostVote[]
-  hiddenPosts  PostNotInterested[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-//
-// ─── Q&A MODELS ───────────────────────────────────────
-//
-
-model Question {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   String?
-  authorId  Int
-  author    User    @relation(fields: [authorId], references: [id])
-  anonymous Boolean @default(false)
-
-  answers   Answer[]
-  comments  QComment[]
-  votes     QuestionVote[]
-  bookmarks Bookmark[]
-  topics    QuestionTopic[]
-  reports   Report[]
-  hiddenBy  NotInterested[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Answer {
-  id         Int      @id @default(autoincrement())
-  content    String
-  questionId Int
-  question   Question @relation(fields: [questionId], references: [id])
-  authorId   Int
-  author     User     @relation(fields: [authorId], references: [id])
-
-  comments Comment[]
-  votes    Vote[]
-  reports  Report[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Comment {
-  id       Int    @id @default(autoincrement())
-  content  String
-  authorId Int
-  author   User   @relation(fields: [authorId], references: [id])
-  answerId Int
-  answer   Answer @relation(fields: [answerId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model QComment {
-  id         Int      @id @default(autoincrement())
-  content    String
-  authorId   Int
-  author     User     @relation(fields: [authorId], references: [id])
-  questionId Int
-  question   Question @relation(fields: [questionId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Vote {
-  id       Int    @id @default(autoincrement())
-  value    Int // 1 = upvote, -1 = downvote
-  userId   Int
-  user     User   @relation(fields: [userId], references: [id])
-  answerId Int
-  answer   Answer @relation(fields: [answerId], references: [id])
-
-  createdAt DateTime @default(now())
-}
-
-model QuestionVote {
-  id         Int      @id @default(autoincrement())
-  value      Int // 1 = upvote, -1 = downvote
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id])
-  questionId Int
-  question   Question @relation(fields: [questionId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, questionId])
-}
-
-model Bookmark {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id])
-  questionId Int
-  question   Question @relation(fields: [questionId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, questionId]) // prevent duplicate bookmarks
-}
-
-model Topic {
-  id        Int             @id @default(autoincrement())
-  name      String          @unique
-  questions QuestionTopic[]
-
-  createdAt DateTime @default(now())
-}
-
-model QuestionTopic {
-  questionId Int
-  topicId    Int
-
-  question Question @relation(fields: [questionId], references: [id])
-  topic    Topic    @relation(fields: [topicId], references: [id])
-
-  @@id([questionId, topicId])
-}
-
-model Report {
-  id         Int       @id @default(autoincrement())
-  reason     String
-  userId     Int
-  user       User      @relation(fields: [userId], references: [id])
-  questionId Int?
-  question   Question? @relation(fields: [questionId], references: [id])
-  answerId   Int?
-  answer     Answer?   @relation(fields: [answerId], references: [id])
-
-  createdAt DateTime @default(now())
-}
-
-model NotInterested {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id])
-  questionId Int
-  question   Question @relation(fields: [questionId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, questionId]) // prevent duplicate "not interested"
-}
-
-//
-// ─── GROUPS AND MEMBERSHIPS ───────────────────────────
-//
-
-model Group {
-  id          Int          @id @default(autoincrement())
-  name        String
-  description String?
-  memberships Membership[]
-  posts       Post[]
-}
-
-model Membership {
-  id      Int   @id @default(autoincrement())
-  userId  Int
-  groupId Int
-  user    User  @relation(fields: [userId], references: [id])
-  group   Group @relation(fields: [groupId], references: [id])
-
-  @@unique([userId, groupId]) // prevent duplicate membership
-}
-
-//
-// ─── FOLLOWS ──────────────────────────────────────────
-//
-
-model Follow {
-  id          Int @id @default(autoincrement())
-  followerId  Int
-  followingId Int
-
-  follower  User @relation("UserFollowing", fields: [followerId], references: [id])
-  following User @relation("UserFollowers", fields: [followingId], references: [id])
-
-  @@unique([followerId, followingId]) // prevent duplicate follows
-}
-
-//
-// ─── POSTS ────────────────────────────────────────────
-//
-
-model Post {
-  id         Int         @id @default(autoincrement())
-  title      String
-  content    String?
-  images     PostImage[]
-  visibility Visibility  @default(PUBLIC)
-  groupId    Int?
-  group      Group?      @relation(fields: [groupId], references: [id])
-  userId     Int
-  user       User        @relation(fields: [userId], references: [id])
-
-  // 🔹 Comments & Votes
-  comments PostComment[]
-  votes    PostVote[]
-
-  // 🔹 Hidden
-  hiddenBy PostNotInterested[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model PostImage {
-  id     Int    @id @default(autoincrement())
-  url    String
-  postId Int
-  post   Post   @relation(fields: [postId], references: [id])
-}
-
-model PostComment {
-  id       Int    @id @default(autoincrement())
-  content  String
-  postId   Int
-  post     Post   @relation(fields: [postId], references: [id])
-  authorId Int
-  author   User   @relation(fields: [authorId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model PostVote {
-  id     Int  @id @default(autoincrement())
-  value  Int // 1 = upvote, -1 = downvote
-  postId Int
-  post   Post @relation(fields: [postId], references: [id])
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, postId]) // prevent duplicate votes on the same post
-}
-
-model PostNotInterested {
-  id     Int  @id @default(autoincrement())
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
-  postId Int
-  post   Post @relation(fields: [postId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, postId]) // prevent duplicate "not interested"
+enum user_role {
+  USER
+  ADMIN
 }

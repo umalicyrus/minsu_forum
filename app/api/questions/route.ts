@@ -37,14 +37,20 @@ export async function GET(req: Request) {
         authorId: user ? { not: user.id } : undefined, // exclude current user's questions
       },
       include: {
-        author: { select: { id: true, name: true } },
-        answers: {
+        // ✅ FIX: use `user` instead of `author`
+        user: { select: { id: true, name: true, image: true } },
+
+        // ✅ FIX: your relation is `answer` not `answers`
+        answer: {
           include: {
-            author: { select: { id: true, name: true } },
+            // ✅ FIX: answers have a `user` relation not `author`
+            user: { select: { id: true, name: true, image: true } },
           },
           orderBy: { createdAt: "desc" },
         },
-        _count: { select: { answers: true } },
+
+        // ✅ FIX: count the right relation name
+        _count: { select: { answer: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -52,7 +58,7 @@ export async function GET(req: Request) {
     return NextResponse.json(
       questions.map((q) => ({
         ...q,
-        answersCount: q._count.answers, // add answers count
+        answersCount: q._count.answer, // ✅ match relation name
       }))
     );
   } catch (err) {
