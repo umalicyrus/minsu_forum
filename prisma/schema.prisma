@@ -13,7 +13,7 @@ model answer {
   questionId Int
   authorId   Int
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt   
+  updatedAt  DateTime  @updatedAt
   anonymous  Boolean   @default(false)
   user       user      @relation(fields: [authorId], references: [id], map: "Answer_authorId_fkey")
   question   question  @relation(fields: [questionId], references: [id], map: "Answer_questionId_fkey")
@@ -104,6 +104,10 @@ model post {
   updatedAt         DateTime            @updatedAt
   group             group?              @relation(fields: [groupId], references: [id], map: "Post_groupId_fkey")
   user              user                @relation(fields: [userId], references: [id], map: "Post_userId_fkey")
+
+  categoryId        Int?                // optional
+  category          Category?           @relation(fields: [categoryId], references: [id]) // 🔥 must match
+
   postcomment       postcomment[]
   postimage         postimage[]
   postnotinterested postnotinterested[]
@@ -119,7 +123,8 @@ model postcomment {
   postId    Int
   authorId  Int
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
+  anonymous Boolean  @default(false)
   user      user     @relation(fields: [authorId], references: [id], map: "PostComment_authorId_fkey")
   post      post     @relation(fields: [postId], references: [id], map: "PostComment_postId_fkey")
 
@@ -181,12 +186,16 @@ model question {
   content       String?
   authorId      Int
   createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt   // ✅ only change here
+  updatedAt     DateTime        @updatedAt   
   anonymous     Boolean         @default(false)
   answer        answer[]
   bookmark      bookmark[]
   notinterested notinterested[]
   qcomment      qcomment[]
+
+  categoryId    Int?            // optional
+  category      Category?       @relation(fields: [categoryId], references: [id]) // 🔥 must match
+
   user          user            @relation(fields: [authorId], references: [id], map: "Question_authorId_fkey")
   questiontopic questiontopic[]
   questionvote  questionvote[]
@@ -268,6 +277,7 @@ model user {
   questionvote                    questionvote[]
   report                          report[]
   vote                            vote[]
+  categoryMembers                 CategoryMember[]
 }
 
 model vote {
@@ -281,6 +291,26 @@ model vote {
 
   @@index([answerId], map: "Vote_answerId_fkey")
   @@index([userId], map: "Vote_userId_fkey")
+}
+
+model Category {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String?
+  imageUrl    String?
+  posts       post[] // fixed capitalization
+  questions   question[] // fixed capitalization
+  members     CategoryMember[]
+}
+
+model CategoryMember {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  categoryId Int
+  joinedAt   DateTime @default(now())
+
+  user     user     @relation(fields: [userId], references: [id]) // lowercase
+  category Category @relation(fields: [categoryId], references: [id])
 }
 
 enum post_visibility {

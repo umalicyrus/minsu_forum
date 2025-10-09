@@ -20,19 +20,19 @@ export async function POST(
   }
 
   // 🔹 Check existing vote
-  const existingVote = await prisma.postVote.findUnique({
+  const existingVote = await prisma.postvote.findUnique({
     where: { userId_postId: { userId: user.id, postId } },
   });
 
   if (existingVote) {
     // Toggle: if same vote exists, remove it
     if (existingVote.value === value) {
-      await prisma.postVote.delete({
+      await prisma.postvote.delete({
         where: { userId_postId: { userId: user.id, postId } },
       });
 
       // recompute counts
-      const votes = await prisma.postVote.findMany({ where: { postId } });
+      const votes = await prisma.postvote.findMany({ where: { postId } });
       const upvotes = votes.filter((v) => v.value === 1).length;
       const downvotes = votes.filter((v) => v.value === -1).length;
 
@@ -40,12 +40,12 @@ export async function POST(
     }
 
     // Otherwise update
-    await prisma.postVote.update({
+    await prisma.postvote.update({
       where: { userId_postId: { userId: user.id, postId } },
       data: { value },
     });
 
-    const votes = await prisma.postVote.findMany({ where: { postId } });
+    const votes = await prisma.postvote.findMany({ where: { postId } });
     const upvotes = votes.filter((v) => v.value === 1).length;
     const downvotes = votes.filter((v) => v.value === -1).length;
 
@@ -53,11 +53,11 @@ export async function POST(
   }
 
   // 🔹 Create new vote
-  await prisma.postVote.create({
+  await prisma.postvote.create({
     data: { userId: user.id, postId, value },
   });
 
-  const votes = await prisma.postVote.findMany({ where: { postId } });
+  const votes = await prisma.postvote.findMany({ where: { postId } });
   const upvotes = votes.filter((v) => v.value === 1).length;
   const downvotes = votes.filter((v) => v.value === -1).length;
 

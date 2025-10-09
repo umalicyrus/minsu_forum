@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth"; // 👈 added
+import { getUserFromRequest } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 
@@ -8,32 +8,27 @@ const uploadsDir = path.join(process.cwd(), "public", "uploads");
 
 export async function GET(req: Request) {
   try {
-    // ✅ get logged in user ID from your JWT cookie
     const authUser = await getUserFromRequest(req);
     const loggedInUserId = authUser?.id;
 
-    // ✅ build follower include dynamically
     const followerInclude = loggedInUserId
       ? {
           where: { followerId: loggedInUserId },
           select: { id: true },
         }
-      : { select: { id: true }, where: { followerId: 0 } }; // always empty if not logged in
+      : { select: { id: true }, where: { followerId: 0 } };
 
-    // ✅ fetch posts with filtered followers
     const posts = await prisma.post.findMany({
       include: {
-        // 🔹 fixed names to match your Prisma schema
-        postimage: true, // instead of images
+        postimage: true,
         group: true,
-        postcomment: true, // instead of comments
-        postvote: true, // instead of votes
+        postcomment: true,
+        postvote: true,
         user: {
           select: {
             id: true,
             name: true,
             image: true,
-            // 🔹 instead of followers use actual relation name
             follow_follow_followingIdTouser: followerInclude,
           },
         },
@@ -41,23 +36,22 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
     });
 
-    // ✅ Add upvotes & downvotes & isFollowing to each post
     const postsWithCounts = posts.map((post) => {
       const upvotes = post.postvote.filter((v) => v.value === 1).length;
       const downvotes = post.postvote.filter((v) => v.value === -1).length;
 
-      // ✅ Check if logged-in user follows this post’s author
       const isFollowing =
         Array.isArray(post.user.follow_follow_followingIdTouser) &&
         post.user.follow_follow_followingIdTouser.length > 0;
 
       return {
         ...post,
+        images: post.postimage.map((img) => ({ url: img.url })), // ✅ remap
         upvotes,
         downvotes,
         user: {
           ...post.user,
-          isFollowing, // 👈 add a boolean flag for frontend
+          isFollowing,
         },
       };
     });
@@ -77,7 +71,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { title, content, visibility, images = [], userId, groupId } = body;
 
-    // Ensure uploads folder exists
     if (!fs.existsSync(uploadsDir))
       fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -104,7 +97,6 @@ export async function POST(req: Request) {
         visibility,
         userId,
         groupId,
-        // 🔹 use postimage instead of images
         postimage: {
           create: uploadedUrls.map((url) => ({ url })),
         },
@@ -114,15 +106,19 @@ export async function POST(req: Request) {
         user: true,
         group: true,
         postcomment: true,
-        postvote: true, // 🔹 votes → postvote
+        postvote: true,
       },
     });
 
-    // ✅ Add upvotes & downvotes to the newly created post
     const upvotes = newPost.postvote.filter((v) => v.value === 1).length;
     const downvotes = newPost.postvote.filter((v) => v.value === -1).length;
 
-    return NextResponse.json({ ...newPost, upvotes, downvotes });
+    return NextResponse.json({
+      ...newPost,
+      images: newPost.postimage.map((img) => ({ url: img.url })), // ✅ remap
+      upvotes,
+      downvotes,
+    });
   } catch (error) {
     console.error("POST /api/posts error:", error);
     return NextResponse.json(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import RichTextEditor from "./RichTextEditor";
+
+interface Category {
+  id: number;
+  name: string;
+}
 
 export default function CreatePostModal({
   userId,
@@ -20,11 +25,19 @@ export default function CreatePostModal({
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [visibility, setVisibility] = useState("PUBLIC");
+  const [categoryId, setCategoryId] = useState<number | "">("");
   const [images, setImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  // handle images
+  // ✅ Fetch categories from API on mount
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => setCategories(data))
+      .catch((err) => console.error("Failed to fetch categories:", err));
+  }, []);
+
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
@@ -36,7 +49,6 @@ export default function CreatePostModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // Convert files to base64
     const base64Files = await Promise.all(
       images.map(
         (file) =>
@@ -54,8 +66,8 @@ export default function CreatePostModal({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title,
-        content, // now HTML from TipTap
-        visibility,
+        content,
+        categoryId: categoryId || null, // ✅ send selected category
         images: base64Files,
         userId,
         groupId,
@@ -86,14 +98,13 @@ export default function CreatePostModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            placeholder='Title'
+            placeholder="Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="rounded-lg bg-white border border-green-300 px-4 py-2 w-full focus:ring-2 focus:ring-green-400"
             required
           />
 
-          {/* TipTap Editor */}
           <div>
             <label className="block text-sm font-medium mb-1 text-green-800">
               Content
@@ -101,59 +112,64 @@ export default function CreatePostModal({
             <RichTextEditor content={content} setContent={setContent} />
           </div>
 
-          <select
-            value={visibility}
-            onChange={(e) => setVisibility(e.target.value)}
-            className="rounded-lg bg-white border border-green-300 px-4 py-2 w-full focus:ring-2 focus:ring-green-400"
-          >
-            <option value="PUBLIC">Public</option>
-            <option value="GROUP">Group</option>
-          </select>
+          {/* ✅ Categories dropdown */}
+          <div>
+            <label className="block text-sm font-medium mb-1 text-green-800">
+              Category
+            </label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(Number(e.target.value))}
+              className="rounded-lg bg-white border border-green-300 px-4 py-2 w-full focus:ring-2 focus:ring-green-400"
+            >
+              <option value="">Select a category</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
 
-
-            {/* Upload Images */}
-            <div>
-              <label className="block text-sm font-medium mb-1 text-green-800">
-                Upload Images
-              </label>
-
-              {/* Make this relative so the file input stays inside */}
-              <div className="relative border-2 border-dashed border-green-300 rounded-lg p-6 flex flex-col items-center justify-center hover:bg-green-100 cursor-pointer">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="absolute inset-0 opacity-0 cursor-pointer z-10" // stays inside this box
-                />
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-10 w-10 text-green-500 pointer-events-none"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                <span className="text-green-700 mt-2 pointer-events-none">
-                  Click or drag to upload
-                </span>
-              </div>
-
-              {/* Preview */}
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                {previewUrls.map((url, i) => (
-                  <img
-                    key={i}
-                    src={url}
-                    alt="preview"
-                    className="rounded border h-20 w-full object-cover"
-                  />
-                ))}
-              </div>
+          {/* Upload Images */}
+          <div>
+            <label className="block text-sm font-medium mb-1 text-green-800">
+              Upload Images
+            </label>
+            <div className="relative border-2 border-dashed border-green-300 rounded-lg p-6 flex flex-col items-center justify-center hover:bg-green-100 cursor-pointer">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-10 w-10 text-green-500 pointer-events-none"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="text-green-700 mt-2 pointer-events-none">
+                Click or drag to upload
+              </span>
             </div>
 
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {previewUrls.map((url, i) => (
+                <img
+                  key={i}
+                  src={url}
+                  alt="preview"
+                  className="rounded border h-20 w-full object-cover"
+                />
+              ))}
+            </div>
+          </div>
 
           <div className="flex justify-end gap-3 mt-6">
             <button

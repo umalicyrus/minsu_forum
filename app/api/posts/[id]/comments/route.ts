@@ -9,7 +9,7 @@ export async function POST(
 ) {
   const { id } = await context.params; // await because it's a promise
   const postId = parseInt(id, 10);
-  const { content } = await req.json();
+  const { content, anonymous } = await req.json();
 
   // ✅ Use your own JWT-based auth
   const user = getUserFromRequest(req);
@@ -18,16 +18,24 @@ export async function POST(
   }
 
   // create the comment
-  const comment = await prisma.postComment.create({
+  const comment = await prisma.postcomment.create({
     data: {
       content,
       authorId: user.id, // comes from your JWT
       postId,
+      anonymous: anonymous ?? false,
+      updatedAt: new Date(),
     },
-    include: { author: true },
+    include: { user: true },
   });
 
-  return NextResponse.json(comment);
+  // ✅ Hide user info if anonymous
+  const safeComment = {
+    ...comment,
+    user: comment.anonymous ? null : comment.user,
+  };
+
+  return NextResponse.json(safeComment);
 }
 
 // ─────────────────────── GET COMMENTS ───────────────────────
@@ -38,11 +46,17 @@ export async function GET(
   const { id } = await context.params;
   const postId = parseInt(id, 10);
 
-  const comments = await prisma.postComment.findMany({
+  const comments = await prisma.postcomment.findMany({
     where: { postId },
-    include: { author: true },
+    include: { user: true },
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(comments);
+  // ✅ Hide user info if anonymous
+  const safeComments = comments.map((c) => ({
+    ...c,
+    user: c.anonymous ? null : c.user,
+  }));
+
+  return NextResponse.json(safeComments);
 }
