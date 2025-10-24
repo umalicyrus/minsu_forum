@@ -9,7 +9,7 @@ export async function GET(
     const answers = await prisma.answer.findMany({
       where: { questionId: Number(params.id) },
       include: {
-        author: { select: { id: true, name: true, image: true } },
+        user: { select: { id: true, name: true, image: true } },
       },
       orderBy: { createdAt: "desc" },
     });

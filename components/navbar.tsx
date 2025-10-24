@@ -1,12 +1,34 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Menu, X, ShoppingBag, MessageSquare, Bell, Search } from "lucide-react"
+
+import {
+  Menu,
+  X,
+  ShoppingBag,
+  MessageSquare,
+  Bell,
+  Search,
+  Bookmark,
+  Settings,
+  Languages,
+  HelpCircle,
+  LogOut,
+  Moon,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -32,7 +54,7 @@ export default function Navbar() {
             <NavLink href="/questions/ask" label="Question" />
             <NavLink href="/posts" label="Forum" />
 
-            {/* Search Bar (static) */}
+            {/* Search Bar */}
             <div className="relative ml-2">
               <Input
                 type="text"
@@ -42,7 +64,7 @@ export default function Navbar() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             </div>
 
-            {/* Static User Menu */}
+            {/* User Menu */}
             <div className="flex items-center gap-3 ml-2">
               <Button size="sm" variant="ghost" className="rounded-full text-gray-700 hover:bg-gray-100">
                 <ShoppingBag className="h-5 w-5" />
@@ -54,10 +76,95 @@ export default function Navbar() {
                 <Bell className="h-5 w-5" />
               </Button>
 
-              {/* Avatar (static) */}
-              <Avatar className="h-8 w-8 bg-[#004D40] text-white">
-                <AvatarFallback>M</AvatarFallback>
-              </Avatar>
+              {/* Updated Avatar Dropdown (White Background) */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="h-8 w-8 cursor-pointer bg-[#004D40] text-white hover:opacity-90 transition">
+                    <AvatarFallback className="font-semibold">U</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 mr-4 mt-2 rounded-xl border border-gray-200 bg-white shadow-lg"
+                >
+                  <DropdownMenuLabel className="font-semibold text-gray-900 px-3">
+                    Umali Cyrus
+                  </DropdownMenuLabel>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/messages"
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-emerald-50 transition"
+                    >
+                      <MessageSquare className="h-4 w-4 text-emerald-600" />
+                      Messages
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/bookmarks"
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-emerald-50 transition"
+                    >
+                      <Bookmark className="h-4 w-4 text-emerald-600" />
+                      Bookmarks
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuLabel className="px-3 text-sm text-gray-600">
+                    Appearance
+                  </DropdownMenuLabel>
+
+                  <DropdownMenuItem className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition">
+                    <Moon className="h-4 w-4 text-emerald-600" />
+                    Dark mode
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/settings"
+                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
+                    >
+                      <Settings className="h-4 w-4 text-emerald-600" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/languages"
+                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
+                    >
+                      <Languages className="h-4 w-4 text-emerald-600" />
+                      Languages
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/help"
+                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
+                    >
+                      <HelpCircle className="h-4 w-4 text-emerald-600" />
+                      Help
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem className="flex items-center gap-2 px-2 py-1.5 text-red-600 hover:bg-red-50 transition">
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </nav>
 
@@ -83,7 +190,6 @@ export default function Navbar() {
             className="md:hidden bg-white border-t"
           >
             <div className="container mx-auto px-4 py-4">
-              {/* Mobile Search Bar */}
               <div className="relative mb-4">
                 <Input
                   type="text"
@@ -104,7 +210,7 @@ export default function Navbar() {
                   Answer
                 </Link>
                 <Link href="/profile" className="px-4 py-2 text-[#004D40] hover:bg-gray-100 rounded-lg">
-                  
+                  Profile
                 </Link>
                 <button className="px-4 py-2 text-red-600 hover:bg-gray-100 rounded-lg text-left">
                   Log Out

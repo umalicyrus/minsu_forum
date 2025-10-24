@@ -69,7 +69,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, content, visibility, images = [], userId, groupId } = body;
+    const { title, content, visibility, images = [], userId, groupId, categoryId } = body;
 
     if (!fs.existsSync(uploadsDir))
       fs.mkdirSync(uploadsDir, { recursive: true });
@@ -90,6 +90,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // ✅ include categoryId when creating post
     const newPost = await prisma.post.create({
       data: {
         title,
@@ -97,6 +98,7 @@ export async function POST(req: Request) {
         visibility,
         userId,
         groupId,
+        categoryId: categoryId || null, // <-- added line
         postimage: {
           create: uploadedUrls.map((url) => ({ url })),
         },
@@ -107,6 +109,7 @@ export async function POST(req: Request) {
         group: true,
         postcomment: true,
         postvote: true,
+        category: true, // optional: include category details
       },
     });
 
@@ -115,7 +118,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ...newPost,
-      images: newPost.postimage.map((img) => ({ url: img.url })), // ✅ remap
+      images: newPost.postimage.map((img) => ({ url: img.url })),
       upvotes,
       downvotes,
     });
@@ -127,3 +130,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
