@@ -2,38 +2,52 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth";
 
-// Helper to validate numeric ID
-function getNumericId(id: string) {
-  const num = Number(id);
+// ✅ Helper: Extract numeric ID from slug (e.g. "1234567890-34567890" → 1234567890)
+function extractIdFromSlug(slug: string) {
+  const idPart = slug.split("-")[0]; // Take everything before the first dash
+  const num = Number(idPart);
   if (isNaN(num)) throw new Error("Invalid question ID");
   return num;
 }
 
-// Get One Question (public)
+// ✅ GET one question (public)
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {
-    const id = getNumericId(params.id);
+    const { id } = params;
+    const isNumeric = !isNaN(Number(id));
 
     const question = await prisma.question.findUnique({
-      where: { id },
-      include: { author: true, answers: true, comments: true },
+      where: isNumeric ? { id: Number(id) } : { slug: id },
+      include: {
+        user: true,
+        answer: {
+          include: { user: true },
+        },
+        qcomment: true,
+        category: true,
+      },
     });
 
-    if (!question) return NextResponse.json({ error: "Question not found" }, { status: 404 });
+    if (!question)
+      return NextResponse.json({ error: "Question not found" }, { status: 404 });
 
     return NextResponse.json(question);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to fetch question" }, { status: 500 });
+    console.error("❌ GET /api/questions/[id] error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to fetch question" },
+      { status: 500 }
+    );
   }
 }
 
-// Update Question (requires login + owner)
+// ✅ PUT (update question)
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const user = await getUserFromRequest(req); // ✅ await added
+  const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const id = getNumericId(params.id);
+    const id = extractIdFromSlug(params.id);
     const { title, content } = await req.json();
 
     const existing = await prisma.question.findUnique({ where: { id } });
@@ -48,17 +62,20 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     return NextResponse.json(updated);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to update question" }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Failed to update question" },
+      { status: 500 }
+    );
   }
 }
 
-// Delete Question (requires login + owner)
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const user = await getUserFromRequest(_); // ✅ await added
+// ✅ DELETE
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const id = getNumericId(params.id);
+    const id = extractIdFromSlug(params.id);
 
     const existing = await prisma.question.findUnique({ where: { id } });
     if (!existing || existing.authorId !== user.id) {
@@ -66,9 +83,11 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     }
 
     await prisma.question.delete({ where: { id } });
-
     return NextResponse.json({ message: "Question deleted" });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to delete question" }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Failed to delete question" },
+      { status: 500 }
+    );
   }
 }

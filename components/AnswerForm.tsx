@@ -1,83 +1,94 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { toast } from "sonner";
 
-type Answer = {
+interface AnswerFormProps {
+  questionId: number;
+  existingAnswer?: Answer;
+  onSuccess: (newAnswer: Answer) => void;
+}
+
+interface Answer {
   id: number;
   content: string;
-  createdAt: string;
-  author?: { name: string | null };
-};
+  anonymous?: boolean;
+}
 
 export default function AnswerForm({
   questionId,
+  existingAnswer,
   onSuccess,
-}: {
-  questionId: number;
-  onSuccess?: (newAnswer: Answer) => void;
-}) {
-  const [content, setContent] = useState("");
+}: AnswerFormProps) {
+  const [content, setContent] = useState(existingAnswer?.content || "");
+  const [anonymous, setAnonymous] = useState(existingAnswer?.anonymous || false);
   const [loading, setLoading] = useState(false);
 
-  // ✅ new state for anonymous checkbox
-  const [anonymous, setAnonymous] = useState(false);
+  const isEditing = !!existingAnswer;
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim()) return;
+    if (!content.trim()) {
+      toast("⚠️ Content cannot be empty.");
+      return;
+    }
 
     setLoading(true);
+
     try {
-      const res = await fetch("/api/answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // ✅ include anonymous in body
-        body: JSON.stringify({ questionId, content, anonymous }),
-      });
+      const res = await fetch(
+        isEditing ? `/api/answers/${existingAnswer?.id}` : "/api/answers",
+        {
+          method: isEditing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            questionId,
+            content,
+            anonymous,
+          }),
+        }
+      );
 
-      if (!res.ok) throw new Error("Failed to post answer");
+      if (!res.ok) throw new Error("Network error");
 
-      const newAnswer: Answer = await res.json(); // ✅ expect full answer from API
-
-      setContent(""); 
-      setAnonymous(false); // ✅ reset checkbox after submit
-      onSuccess?.(newAnswer); // ✅ send to parent
+      const data = await res.json();
+      onSuccess(data);
     } catch (err) {
       console.error(err);
-      alert("Error posting answer");
+      toast("❌ Something went wrong");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your answer..."
-          className="flex-1 border rounded-lg p-2"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-        >
-          {loading ? "Posting..." : "Answer"}
-        </button>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <textarea
+        className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+        rows={4}
+        placeholder="Write your answer..."
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        disabled={loading}
+      />
 
-      {/* ✅ checkbox for anonymous answers */}
       <label className="flex items-center gap-2 text-sm text-gray-600">
         <input
           type="checkbox"
           checked={anonymous}
           onChange={(e) => setAnonymous(e.target.checked)}
+          disabled={loading}
         />
-        Post as Anonymous
+        Post anonymously
       </label>
+
+      <button
+        type="submit"
+        className="w-full bg-green-600 text-white py-2 px-4 rounded-lg shadow hover:bg-green-700 transition"
+        disabled={loading}
+      >
+        {loading ? "Saving..." : isEditing ? "Update Answer" : "Post Answer"}
+      </button>
     </form>
   );
 }

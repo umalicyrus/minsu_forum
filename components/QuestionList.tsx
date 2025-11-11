@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ReportModal from "@/components/ReportModal";
 import {
   MessageCircle,
   ThumbsUp,
@@ -16,8 +17,11 @@ type Question = {
   id: number;
   title: string;
   content?: string;
+  slug?: string;
   answersCount?: number;
   anonymous?: boolean;
+  upvotes?: number; // ✅ Added
+  downvotes?: number; // ✅ Added
   author?: {
     name: string | null;
     image?: string | null;
@@ -47,14 +51,46 @@ export default function QuestionList({
   const [answeringId, setAnsweringId] = useState<number | null>(null);
   const [expandedAnswers, setExpandedAnswers] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+const [reportQuestionId, setReportQuestionId] = useState<number | null>(null);
+
+  // ✅ FIX: handleVote moved inside component so it can access setQuestions
+  const handleVote = async (questionId: number, value: number) => {
+    try {
+      const res = await fetch(`/api/questions/${questionId}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      });
+
+      if (!res.ok) throw new Error("Vote failed");
+
+      const updatedQuestion = await res.json();
+
+      setQuestions((prev) =>
+        prev.map((q) =>
+          q.id === updatedQuestion.id
+            ? {
+                ...q,
+                upvotes: updatedQuestion.upvotes,
+                downvotes: updatedQuestion.downvotes,
+              }
+            : q
+        )
+      );
+    } catch (err) {
+      console.error("Voting error:", err);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
 
     const fetchQuestions = async () => {
       try {
-        // 🟢 Use categoryId to filter server-side if provided
-        const url = categoryId ? `/api/questions?categoryId=${categoryId}` : "/api/questions";
+        const url = categoryId
+          ? `/api/questions?categoryId=${categoryId}`
+          : "/api/questions";
         const res = await fetch(url);
 
         if (!mounted) return;
@@ -74,11 +110,10 @@ export default function QuestionList({
     return () => {
       mounted = false;
     };
-  }, [refreshKey, categoryId]); // 🟢 include categoryId so it refetches when selection changes
+  }, [refreshKey, categoryId]);
 
   return (
     <div className="space-y-6">
-      {/* 🟢 Display message if no questions */}
       {questions.length === 0 ? (
         <p className="text-center text-gray-500 italic mt-10">
           No questions yet in this category.
@@ -92,19 +127,16 @@ export default function QuestionList({
             {/* ✅ User Avatar + Name */}
             <div className="flex items-center gap-3 mb-2">
               {q.anonymous ? (
-                // Anonymous avatar
                 <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold">
                   ?
                 </div>
               ) : q.author?.image ? (
-                // User image
                 <img
                   src={q.author.image}
                   alt={q.author.name || "User"}
                   className="w-10 h-10 rounded-full object-cover"
                 />
               ) : (
-                // Letter avatar fallback
                 <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center text-green-700 font-bold">
                   {q.author?.name?.charAt(0).toUpperCase() || "U"}
                 </div>
@@ -123,13 +155,13 @@ export default function QuestionList({
             </Link>
 
             {/* Content */}
-            {q.content && <p className="text-sm text-gray-600 mt-2">{q.content}</p>}
+            {q.content && (
+              <p className="text-sm text-gray-600 mt-2">{q.content}</p>
+            )}
 
             {/* Button row */}
             <div className="flex justify-between items-center mt-4">
-              {/* Left section with Answer count + icons */}
               <div className="flex flex-col items-start gap-2">
-                {/* Total answers */}
                 <button
                   onClick={() =>
                     setExpandedAnswers(expandedAnswers === q.id ? null : q.id)
@@ -139,9 +171,7 @@ export default function QuestionList({
                   {q.answersCount || 0} Answers
                 </button>
 
-                {/* Icons row */}
                 <div className="flex items-center gap-6">
-                  {/* Answer */}
                   <button
                     className="p-2 rounded-full hover:bg-gray-200 transition"
                     title="Answer"
@@ -152,21 +182,23 @@ export default function QuestionList({
                     <MessageCircle className="w-5 h-5" />
                   </button>
 
-                  {/* Upvote */}
-                  <button
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Upvote"
-                  >
-                    <ThumbsUp className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      className="p-2 rounded-full hover:bg-gray-200 transition"
+                      onClick={() => handleVote(q.id, 1)}
+                    >
+                      <ThumbsUp className="w-5 h-5" />
+                    </button>
+                    <span className="text-sm text-gray-700">{q.upvotes}</span>
 
-                  {/* Downvote */}
-                  <button
-                    className="p-2 rounded-full hover:bg-gray-200 transition"
-                    title="Downvote"
-                  >
-                    <ThumbsDown className="w-5 h-5" />
-                  </button>
+                    <button
+                      className="p-2 rounded-full hover:bg-gray-200 transition"
+                      onClick={() => handleVote(q.id, -1)}
+                    >
+                      <ThumbsDown className="w-5 h-5" />
+                    </button>
+                    <span className="text-sm text-gray-700">{q.downvotes}</span>
+                  </div>
                 </div>
               </div>
 
@@ -174,26 +206,28 @@ export default function QuestionList({
               <div className="relative">
                 <button
                   onClick={() => setOpenMenuId(openMenuId === q.id ? null : q.id)}
-                  className="p-1 hover:bg-gray-200 rounded-full transition"
+                  className="p-2 hover:bg-gray-200 rounded-full transition-colors duration-200"
                   title="More options"
                 >
-                  <MoreHorizontal className="w-5 h-5" />
+                  <MoreHorizontal className="w-5 h-5 text-gray-600" />
                 </button>
 
                 {openMenuId === q.id && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10 animate-fadeIn">
-                    <ul className="text-sm text-gray-700 divide-y divide-gray-100">
+                  <div className="absolute right-0 mt-2 w-60 bg-white border border-gray-200 rounded-xl shadow-lg z-20 animate-fadeIn scale-95 origin-top-right transition-all duration-200">
+                    <ul className="text-base text-gray-800 divide-y divide-gray-100">
+                      {/* Copy Link */}
                       <li>
                         <button
+                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 w-full"
                           onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/questions/${q.id}`);
+                            navigator.clipboard.writeText(`${window.location.origin}/questions/${q.slug}`);
                             setOpenMenuId(null);
+                            toast({ title: "Copied!", description: "Question link copied to clipboard" });
                           }}
-                          className="flex items-center w-full px-4 py-2 hover:bg-gray-100 transition"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="w-4 h-4 mr-2 text-gray-500"
+                            className="w-5 h-5 text-gray-600"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -205,18 +239,20 @@ export default function QuestionList({
                         </button>
                       </li>
 
+                      {/* Request Answers */}
                       <li>
-                        <button className="flex items-center w-full px-4 py-2 hover:bg-gray-100 transition">
-                          <MessageCircle className="w-4 h-4 mr-2 text-gray-500" />
+                        <button className="flex items-center px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 w-full">
+                          <MessageCircle className="w-5 h-5 mr-2 text-gray-600" />
                           Request answers
                         </button>
                       </li>
 
+                      {/* Pass Question */}
                       <li>
-                        <button className="flex items-center w-full px-4 py-2 hover:bg-gray-100 transition">
+                        <button className="flex items-center px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 w-full">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="w-4 h-4 mr-2 text-gray-500"
+                            className="w-5 h-5 mr-2 text-gray-600"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -228,11 +264,12 @@ export default function QuestionList({
                         </button>
                       </li>
 
+                      {/* Answer Later */}
                       <li>
-                        <button className="flex items-center w-full px-4 py-2 hover:bg-gray-100 transition">
+                        <button className="flex items-center px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 w-full">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="w-4 h-4 mr-2 text-gray-500"
+                            className="w-5 h-5 mr-2 text-gray-600"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -244,11 +281,12 @@ export default function QuestionList({
                         </button>
                       </li>
 
+                      {/* Merge Questions */}
                       <li>
-                        <button className="flex items-center w-full px-4 py-2 hover:bg-gray-100 transition">
+                        <button className="flex items-center px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 w-full">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="w-4 h-4 mr-2 text-gray-500"
+                            className="w-5 h-5 mr-2 text-gray-600"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -260,11 +298,19 @@ export default function QuestionList({
                         </button>
                       </li>
 
+                      {/* Report */}
                       <li>
-                        <button className="flex items-center w-full px-4 py-2 text-red-600 hover:bg-red-50 transition">
+                        <button
+                          onClick={() => {
+                            setReportQuestionId(q.id);
+                            setReportModalOpen(true);
+                            setOpenMenuId(null);
+                          }}
+                          className="flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 w-full"
+                        >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="w-4 h-4 mr-2 text-red-500"
+                            className="w-5 h-5 mr-2 text-red-600"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -279,15 +325,13 @@ export default function QuestionList({
                   </div>
                 )}
               </div>
-
             </div>
 
-            {/* Inline Answer Form (shows only if Answer icon is clicked) */}
             {answeringId === q.id && (
               <AnswerForm
                 questionId={q.id}
                 onSuccess={(newAnswer) => {
-                  setAnsweringId(null); // hide form after submit
+                  setAnsweringId(null);
                   setQuestions((prev) =>
                     prev.map((qq) =>
                       qq.id === q.id
@@ -299,9 +343,8 @@ export default function QuestionList({
                         : qq
                     )
                   );
-                  setExpandedAnswers(q.id); // auto expand after submit
+                  setExpandedAnswers(q.id);
 
-                  // Toast notification here
                   toast({
                     title: "Answer submitted",
                     description: "Your answer was posted successfully!",
@@ -310,49 +353,59 @@ export default function QuestionList({
               />
             )}
 
-            {/* Show answers list if expanded */}
-            {expandedAnswers === q.id && q.answers && q.answers.length > 0 && (
-              <div className="mt-4 space-y-3 pl-4 border-l-2 border-green-300">
-                {q.answers.map((a) => (
-                  <div
-                    key={a.id}
-                    className="p-3 bg-white rounded-xl shadow-sm border border-green-200 text-sm text-gray-800"
-                  >
-                    <div className="flex items-center gap-2">
-                      {a.anonymous ? (
-                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-sm font-bold">
-                          ?
-                        </div>
-                      ) : a.author?.image ? (
-                        <img
-                          src={a.author.image}
-                          alt={a.author.name || "User"}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center text-green-700 text-sm font-bold">
-                          {a.author?.name?.charAt(0).toUpperCase() || "U"}
-                        </div>
-                      )}
-                      <span className="font-medium text-green-800">
-                        {a.anonymous
-                          ? "Anonymous"
-                          : a.author?.name || "Unknown User"}
-                      </span>
-                      {a.createdAt && (
-                        <span className="text-xs text-gray-500">
-                          {new Date(a.createdAt).toLocaleString()}
+            {expandedAnswers === q.id &&
+              q.answers &&
+              q.answers.length > 0 && (
+                <div className="mt-4 space-y-3 pl-4 border-l-2 border-green-300">
+                  {q.answers.map((a) => (
+                    <div
+                      key={a.id}
+                      className="p-3 bg-white rounded-xl shadow-sm border border-green-200 text-sm text-gray-800"
+                    >
+                      <div className="flex items-center gap-2">
+                        {a.anonymous ? (
+                          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-sm font-bold">
+                            ?
+                          </div>
+                        ) : a.author?.image ? (
+                          <img
+                            src={a.author.image}
+                            alt={a.author.name || "User"}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center text-green-700 text-sm font-bold">
+                            {a.author?.name?.charAt(0).toUpperCase() || "U"}
+                          </div>
+                        )}
+                        <span className="font-medium text-green-800">
+                          {a.anonymous
+                            ? "Anonymous"
+                            : a.author?.name || "Unknown User"}
                         </span>
-                      )}
+                        {a.createdAt && (
+                          <span className="text-xs text-gray-500">
+                            {new Date(a.createdAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1">{a.content}</p>
                     </div>
-                    <p className="mt-1">{a.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
           </Card>
+          
         ))
+        
       )}
+<ReportModal
+  open={reportModalOpen}
+  onClose={() => setReportModalOpen(false)}
+  questionId={reportQuestionId ?? undefined}
+/>
+    
     </div>
+    
   );
 }

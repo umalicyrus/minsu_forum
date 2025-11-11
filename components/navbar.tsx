@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-
 import {
   Menu,
   X,

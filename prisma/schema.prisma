@@ -183,6 +183,7 @@ model qcomment {
 model question {
   id            Int             @id @default(autoincrement())
   title         String
+  slug          String @unique
   content       String?
   authorId      Int
   createdAt     DateTime        @default(now())

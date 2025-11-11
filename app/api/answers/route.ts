@@ -1,3 +1,4 @@
+///api/answers/[id]
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth"; // adjust path if needed
@@ -29,12 +30,23 @@ export async function POST(req: Request) {
       },
     });
 
-    const answerWithAuthor = {
-      ...answer,
-      author: answer.user,
-    };
+const answerWithUser = {
+  id: answer.id,
+  content: answer.content,
+  createdAt: answer.createdAt,
+  authorId: answer.authorId,
+  anonymous: answer.anonymous,
+  user: answer.anonymous
+    ? null
+    : {
+        id: answer.user?.id,
+        name: answer.user?.name,
+        image: answer.user?.image,
+      },
+};
 
-    return NextResponse.json(answerWithAuthor, { status: 201 });
+
+    return NextResponse.json(answerWithUser, { status: 201 });
   } catch (err: any) {
     console.error("Answer POST error:", err);
     return NextResponse.json({ error: "Failed to post answer" }, { status: 500 });
