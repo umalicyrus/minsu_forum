@@ -83,86 +83,98 @@ export default function Navbar() {
                   </Avatar>
                 </DropdownMenuTrigger>
 
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 mr-4 mt-2 rounded-xl border border-gray-200 bg-white shadow-lg"
-                >
-                  <DropdownMenuLabel className="font-semibold text-gray-900 px-3">
-                    Umali Cyrus
-                  </DropdownMenuLabel>
+<DropdownMenuContent
+  align="end"
+  className="w-56 mr-4 mt-2 rounded-xl border border-gray-200 bg-white shadow-lg"
+>
 
-                  <DropdownMenuSeparator />
+  {/* View Profile */}
+  <DropdownMenuItem asChild>
+    <Link
+      href="/profile"
+      className="flex items-center gap-2 px-3 py-2 font-medium text-gray-900 hover:bg-emerald-50 rounded-md transition"
+    >
+      <Avatar className="h-6 w-6 bg-emerald-600 text-white flex items-center justify-center">
+        <AvatarFallback className="text-sm">U</AvatarFallback>
+      </Avatar>
+      View Profile
+    </Link>
+  </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/messages"
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-emerald-50 transition"
-                    >
-                      <MessageSquare className="h-4 w-4 text-emerald-600" />
-                      Messages
-                    </Link>
-                  </DropdownMenuItem>
+  <DropdownMenuSeparator />
 
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/bookmarks"
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-emerald-50 transition"
-                    >
-                      <Bookmark className="h-4 w-4 text-emerald-600" />
-                      Bookmarks
-                    </Link>
-                  </DropdownMenuItem>
+  <DropdownMenuItem asChild>
+    <Link
+      href="/messages"
+      className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-emerald-50 transition"
+    >
+      <MessageSquare className="h-4 w-4 text-emerald-600" />
+      Messages
+    </Link>
+  </DropdownMenuItem>
 
-                  <DropdownMenuSeparator />
+  <DropdownMenuItem asChild>
+    <Link
+      href="/bookmarks"
+      className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-emerald-50 transition"
+    >
+      <Bookmark className="h-4 w-4 text-emerald-600" />
+      Bookmarks
+    </Link>
+  </DropdownMenuItem>
 
-                  <DropdownMenuLabel className="px-3 text-sm text-gray-600">
-                    Appearance
-                  </DropdownMenuLabel>
+  <DropdownMenuSeparator />
 
-                  <DropdownMenuItem className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition">
-                    <Moon className="h-4 w-4 text-emerald-600" />
-                    Dark mode
-                  </DropdownMenuItem>
+  <DropdownMenuLabel className="px-3 text-sm text-gray-600">
+    Appearance
+  </DropdownMenuLabel>
 
-                  <DropdownMenuSeparator />
+  <DropdownMenuItem className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition">
+    <Moon className="h-4 w-4 text-emerald-600" />
+    Dark mode
+  </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/settings"
-                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
-                    >
-                      <Settings className="h-4 w-4 text-emerald-600" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
+  <DropdownMenuSeparator />
 
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/languages"
-                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
-                    >
-                      <Languages className="h-4 w-4 text-emerald-600" />
-                      Languages
-                    </Link>
-                  </DropdownMenuItem>
+  <DropdownMenuItem asChild>
+    <Link
+      href="/settings"
+      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
+    >
+      <Settings className="h-4 w-4 text-emerald-600" />
+      Settings
+    </Link>
+  </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/help"
-                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
-                    >
-                      <HelpCircle className="h-4 w-4 text-emerald-600" />
-                      Help
-                    </Link>
-                  </DropdownMenuItem>
+  <DropdownMenuItem asChild>
+    <Link
+      href="/languages"
+      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
+    >
+      <Languages className="h-4 w-4 text-emerald-600" />
+      Languages
+    </Link>
+  </DropdownMenuItem>
 
-                  <DropdownMenuSeparator />
+  <DropdownMenuItem asChild>
+    <Link
+      href="/help"
+      className="flex items-center gap-2 px-2 py-1.5 hover:bg-emerald-50 transition"
+    >
+      <HelpCircle className="h-4 w-4 text-emerald-600" />
+      Help
+    </Link>
+  </DropdownMenuItem>
 
-                  <DropdownMenuItem className="flex items-center gap-2 px-2 py-1.5 text-red-600 hover:bg-red-50 transition">
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
+  <DropdownMenuSeparator />
+
+  <DropdownMenuItem className="flex items-center gap-2 px-2 py-1.5 text-red-600 hover:bg-red-50 transition">
+    <LogOut className="h-4 w-4" />
+    Logout
+  </DropdownMenuItem>
+
+</DropdownMenuContent>
+
               </DropdownMenu>
             </div>
           </nav>
