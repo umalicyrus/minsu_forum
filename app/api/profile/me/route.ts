@@ -16,14 +16,26 @@ export async function GET(req: Request) {
     }
 
     // Fetch user data from database
-    const user = await prisma.user.findUnique({
-      where: { id: userFromToken.id },
-      include: {
+const user = await prisma.user.findUnique({
+  where: { id: userFromToken.id },
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    bio: true,
+    image: true,
+    location: true,
+    role: true,
+    _count: {
+      select: {
         answer: true,
         question: true,
         follow_follow_followerIdTouser: true, // following
       },
-    });
+    },
+    createdAt: true,
+  },
+});
 
     if (!user) {
       return NextResponse.json(
@@ -37,23 +49,24 @@ export async function GET(req: Request) {
       where: { userId: user.id },
     });
 
-    return NextResponse.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      bio: user.bio,
-      image: user.image,
-      location: user.location,
-      role: user.role,
+return NextResponse.json({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  bio: user.bio,
+  image: user.image,
+  location: user.location,
+  role: user.role,
 
-      answers: user.answer.length,
-      questions: user.question.length,
-      following: user.follow_follow_followerIdTouser?.length ?? 0,
+  answers: user._count.answer,
+  questions: user._count.question,
+  following: user._count.follow_follow_followerIdTouser,
 
-      level: user.location ?? "Not set",
-      joined: user.createdAt,
-      warnings,
-    });
+  level: user.location ?? "Not set",
+  joined: user.createdAt,
+  warnings,
+});
+
   } catch (error) {
     console.error("Profile API Error:", error);
     return NextResponse.json(
