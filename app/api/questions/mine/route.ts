@@ -16,7 +16,7 @@ export async function GET(req: Request) {
                     include: {topic: true},
                 },
                 answer: true,
-                questionvote: true,                
+                user: true,                
             },
             orderBy: {
                 createdAt: "desc",

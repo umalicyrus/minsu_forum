@@ -1,11 +1,275 @@
 "use client"
-
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import Link from "next/link"
-import { ChevronDown, ArrowRight, BookOpen, ShoppingCart, Users, Zap } from "lucide-react"
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { ChevronDown, ArrowRight, BookOpen, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button"
+import { MessageCircle, ArrowUp, Clock } from "lucide-react";
+
+interface Feature {
+  title: string
+  description: string
+  image: string
+  link: string
+  gradient: string
+  glow: string
+}
+function TiltCard({ feature, index }: any) {
+  const [rotate, setRotate] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: any) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    setRotate({ x: y / 20, y: -x / 20 });
+  };
+
+  const resetTilt = () => setRotate({ x: 0, y: 0 });
+
+  return (
+    <Link href={feature.link ?? "#"}>
+      <motion.div
+        onMouseMove={handleMouseMove}
+        onMouseLeave={resetTilt}
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        animate={{ rotateX: rotate.x, rotateY: rotate.y }}
+        transition={{ type: "spring", stiffness: 120, damping: 12 }}
+        whileHover={{ scale: 1.03 }}
+        className="relative rounded-2xl cursor-pointer perspective-1000"
+      >
+        {/* Card with transparent background and gradient border on hover */}
+        <div className="relative p-10 rounded-2xl h-full flex flex-col items-center text-center
+                        bg-transparent border-2 border-gray-300 hover:border-0
+                        hover:bg-[conic-gradient(from_180deg_at_50%_50%,#d9f0e6,#fef3c7,#d9f0e6)] 
+                        transition-all duration-300">
+          {/* Floating icon */}
+          <motion.div
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            className="relative mb-6"
+          >
+            <img
+              src={feature.image}
+              alt={feature.title}
+              className="w-24 h-24 relative z-10 object-contain drop-shadow-md"
+            />
+          </motion.div>
+
+          {/* Text */}
+          <h3 className="text-xl font-bold text-gray-800 mb-2">{feature.title}</h3>
+          <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+        </div>
+      </motion.div>
+    </Link>
+  );
+}
+
+export function PopularQuestionsPreview() {
+  const questions = [
+    {
+      id: 1,
+      user: {
+        name: "John Dela Cruz",
+        avatar: "/uploads/homepage/man1.jpg",
+      },
+      question:
+        "How can I fix Prisma authentication error when connecting to MySQL in Laragon?",
+      answers: 14,
+      upvotes: 52,
+      time: "2 hours ago",
+    },
+    {
+      id: 2,
+      user: {
+        name: "Sarah Villanueva",
+        avatar: "/uploads/homepage/woman1.jpg",
+      },
+      question:
+        "What are the academic requirements for shifting courses inside MinSU?",
+      answers: 6,
+      upvotes: 27,
+      time: "5 hours ago",
+    },
+    {
+      id: 3,
+      user: {
+        name: "Carlos Gomez",
+        avatar: "/uploads/homepage/man2.jpg",
+      },
+      question:
+        "Any tips or reviewers for passing the Civil Service Examination?",
+      answers: 19,
+      upvotes: 61,
+      time: "1 day ago",
+    },
+    {
+      id: 4,
+      user: {
+        name: "Jenny Rose",
+        avatar: "/uploads/homepage/woman2.jpg",
+      },
+      question:
+        "How to deploy a Next.js app with Prisma and MySQL database?",
+      answers: 9,
+      upvotes: 33,
+      time: "3 hours ago",
+    },
+  ];
+
+  return (
+    <section className="mt-20 px-4 md:px-8 lg:px-12">
+      <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+        Popular Questions
+      </h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+        {questions.map((q) => (
+          <div
+            key={q.id}
+            className="
+              group relative
+              pt-16 pb-8 px-6
+              rounded-3xl 
+              bg-[#f7f7f2]
+              border-2 border-transparent
+              hover:outline hover:outline-[3px]
+              hover:outline-[conic-gradient(from_180deg_at_50%_50%,#bbf7d0,#fef3c7,#bbf7d0)]
+              transition-all duration-300
+              shadow-md hover:shadow-2xl
+              min-h-[340px]
+              text-center
+              mx-4
+              flex flex-col
+            "
+          >
+            {/* USER AVATAR HALF-OUTSIDE */}
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+              <img
+                src={q.user.avatar}
+                className="
+                  w-20 h-20 
+                  rounded-full object-cover 
+                  border-4 border-white shadow-lg
+                "
+                alt={q.user.name}
+              />
+            </div>
+
+            <p className="font-semibold text-gray-800 text-lg mt-2">
+              {q.user.name}
+            </p>
+
+            <p className="text-gray-900 font-medium mt-4 mb-6 leading-snug text-sm">
+              {q.question}
+            </p>
+
+            {/* FOOTER ICONS */}
+            <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4 mt-auto">
+              
+              {/* Answers */}
+              <div className="flex items-center gap-3">
+                <img
+                  src="/uploads/homepage/answer.png"
+                  className="w-6 h-6"
+                  alt="answers"
+                />
+                <span className="text-gray-700 font-medium">{q.answers} Answers</span>
+              </div>
+
+              {/* Upvotes */}
+              <div className="flex items-center gap-3">
+                <img
+                  src="/uploads/homepage/like.png"
+                  className="w-6 h-6"
+                  alt="upvotes"
+                />
+                <span className="text-gray-700 font-medium">{q.upvotes} Upvotes</span>
+              </div>
+
+              {/* Time */}
+              <div className="text-gray-500 text-sm">{q.time}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
+export function FeatureSection() {
+const cards = [
+  {
+    title: "Forum",
+    description: "Ask questions, share knowledge, and connect with peers.",
+    image: "/uploads/homepage/question-mark.png",
+    link: "/forum",
+    gradient: "from-green-200 to-green-400", // softer green
+    glow: "from-green-100 to-green-300",
+  },
+  {
+    title: "Groups",
+    description: "Join study groups, clubs, and department channels for collaboration.",
+    image: "/uploads/homepage/diversity.png",
+    link: "/groups",
+    gradient: "from-teal-200 to-teal-400", // softer teal
+    glow: "from-teal-100 to-teal-300",
+  },
+  {
+    title: "Recognition",
+    description: "Earn points, ranks, and badges for helpful contributions.",
+    image: "/uploads/homepage/trophy.png",
+    link: "/achievements",
+    gradient: "from-yellow-200 to-yellow-400", // softer yellow/amber
+    glow: "from-yellow-100 to-yellow-300",
+  },
+]
+
+
+  return (
+    <section className="py-20 ">
+      {/* Animated background blobs */}
+      <motion.div
+        className="absolute top-0 left-1/4 w-64 h-64 rounded-full"
+        animate={{ x: [0, 50, 0], y: [0, 30, 0], scale: [1, 1.2, 1] }}
+        transition={{ repeat: Infinity, duration: 15, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-amber-200/30 blur-3xl"
+        animate={{ x: [0, -70, 0], y: [0, 50, 0], scale: [1, 1.3, 1] }}
+        transition={{ repeat: Infinity, duration: 20, ease: "easeInOut" }}
+      />
+
+      <div className="container mx-auto px-4 relative z-10">
+        <motion.div
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <div className="inline-block mb-4 px-4 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium border border-green-200">
+            Platform Features
+          </div>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            Everything You Need in One Place
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Connect with your campus community through our integrated forum designed specifically for MinSU students.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          {cards.map((feature, index) => (
+            <TiltCard key={index} feature={feature} index={index} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 
 export default function LandingPage() {
   const [scrollY, setScrollY] = useState(0)
@@ -52,15 +316,13 @@ export default function LandingPage() {
             className="max-w-4xl mx-auto"
           >
             <div className="inline-block mb-6 px-6 py-2 border border-green-500/30 rounded-full bg-green-50 text-green-800 text-sm font-medium">
-              Mindoro State University's Student Marketplace
+              Mindoro State University's Student Forum
             </div>
             <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              Connect, Trade, and{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-amber-600">Thrive</span>{" "}
-              with MinSU
+              Ask, Learn, and <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-amber-600">Connect</span> with MinSUForum
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
-              Your campus marketplace and forum. Buy, sell, ask questions, and connect with fellow students.
+              A friendly campus forum to ask questions, share knowledge, join groups, and help one another succeed.
             </p>
           </motion.div>
 
@@ -90,7 +352,7 @@ export default function LandingPage() {
           >
             {[
               { label: "Active Users", value: "1,200+", icon: <Users className="h-5 w-5 text-green-600" /> },
-              { label: "Items Listed", value: "3,500+", icon: <ShoppingCart className="h-5 w-5 text-amber-600" /> },
+              { label: "Questions Posted", value: "3,500+", icon: <BookOpen className="h-5 w-5 text-amber-600" /> },
               { label: "Questions Answered", value: "8,700+", icon: <BookOpen className="h-5 w-5 text-green-600" /> },
               { label: "Avg. Response Time", value: "15 min", icon: <Zap className="h-5 w-5 text-amber-600" /> },
             ].map((stat, index) => (
@@ -118,119 +380,11 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            <div className="inline-block mb-4 px-4 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium border border-green-200">
-              Platform Features
-            </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Everything You Need in One Place</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Connect with your campus community through our integrated platform designed specifically for college
-              students
-            </p>
-          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {[
-              {
-                title: "Marketplace",
-                description: "Buy and sell college essentials, from textbooks to electronics.",
-                icon: "🛒",
-                color: "from-green-500 to-green-600",
-              },
-              {
-                title: "Forum",
-                description: "Ask questions, share knowledge, and connect with peers.",
-                icon: "❓",
-                color: "from-amber-500 to-amber-600",
-              },
-              {
-                title: "Rewards",
-                description: "Earn points and ranks as you contribute to the community.",
-                icon: "🏆",
-                color: "from-green-500 to-amber-500",
-              },
-            ].map((feature, index) => (
-              <motion.div
-                key={index}
-                className={`bg-gradient-to-br ${feature.color} p-0.5 rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all`}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.2 }}
-                whileHover={{ y: -5 }}
-              >
-                <div className="bg-white p-8 rounded-2xl h-full">
-                  <div className="text-4xl mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-3">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.description}</p>
-                </div>
-                
-              </motion.div>
-              
-            ))}
-            
-          </div>
-          
-        </div>
-      </section>
-            {/* Popular Items Preview */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-12">
-            <div>
-              <div className="inline-block mb-4 px-4 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-                Marketplace
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900">Popular Items</h2>
-            </div>
-            <Link href="/marketplace">
-              <Button className="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 group mt-4 md:mt-0">
-                View All <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-          </div>
+< FeatureSection/>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { name: "Calculus Textbook", price: "₱650", image: "/placeholder.svg?height=300&width=300" },
-              { name: "Scientific Calculator", price: "₱950", image: "/placeholder.svg?height=300&width=300" },
-              { name: "Study Desk", price: "₱1,200", image: "/placeholder.svg?height=300&width=300" },
-              { name: "Wireless Headphones", price: "₱800", image: "/placeholder.svg?height=300&width=300" },
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                className="bg-white rounded-2xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
-              >
-                <div className="h-48 relative">
-                  <Image src={item.image || "/placeholder.svg"} alt={item.name} fill style={{ objectFit: "cover" }} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-semibold text-lg text-gray-800">{item.name}</h3>
-                  <p className="text-green-600 font-bold">{item.price}</p>
-                  <Link href="/auth/login" className="mt-3 block">
-                    <Button className="w-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200">
-                      View Details
-                    </Button>
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Popular Questions Preview (replaces Marketplace) */}
+< PopularQuestionsPreview/>
 
       {/* Hot Forum Topics */}
       <section className="py-20 bg-gray-50">
@@ -240,7 +394,35 @@ export default function LandingPage() {
               <div className="inline-block mb-4 px-4 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium border border-green-200">
                 Forum
               </div>
-              <h2 className="text-3xl font-bold text-gray-900">Hot Topics</h2>
+              <h2 className="text-3xl font-bold mb-8 text-center">Categories</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+          <div className="p-6 bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <h3 className="font-bold text-lg mb-2">💻 IT & Computer Science</h3>
+            <p className="text-gray-300 text-sm">Topics: coding, DSA, SQL, networking</p>
+          </div>
+          <div className="p-6 bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <h3 className="font-bold text-lg mb-2">📚 General Education</h3>
+            <p className="text-gray-300 text-sm">Math, English, Science</p>
+          </div>
+          <div className="p-6 bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <h3 className="font-bold text-lg mb-2">🧪 Engineering</h3>
+            <p className="text-gray-300 text-sm">CE, EE, ME</p>
+          </div>
+          <div className="p-6 bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <h3 className="font-bold text-lg mb-2">🎓 Student Life</h3>
+            <p className="text-gray-300 text-sm">Campus concerns</p>
+          </div>
+          <div className="p-6 bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <h3 className="font-bold text-lg mb-2">💼 Careers & Jobs</h3>
+            <p className="text-gray-300 text-sm">Exams, resumes, interviews</p>
+          </div>
+          <div className="p-6 bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <h3 className="font-bold text-lg mb-2">❓ Miscellaneous</h3>
+            <p className="text-gray-300 text-sm">Others</p>
+          </div>
+        </div>
+
+        <h2 className="text-3xl font-bold mb-8 text-center">Hot Topics</h2>
             </div>
             <Link href="/forum">
               <Button className="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 group mt-4 md:mt-0">
@@ -264,10 +446,8 @@ export default function LandingPage() {
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ x: 5 }}
               >
-                <Link href="/auth/login">
-                  <h3 className="text-xl font-medium text-gray-800 hover:text-green-600 transition-colors">
-                    {topic.title}
-                  </h3>
+                <Link href="/forum">
+                  <h3 className="text-xl font-medium text-gray-800 hover:text-green-600 transition-colors">{topic.title}</h3>
                 </Link>
                 <div className="flex mt-3 text-sm text-gray-500">
                   <p className="mr-6">{topic.replies} replies</p>
@@ -298,9 +478,9 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-4xl font-bold mb-6 text-white">Ready to Join MinSU Marketplace & Forum?</h2>
+            <h2 className="text-4xl font-bold mb-6 text-white">Ready to Join MinSU Forum?</h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-              Create an account today and start connecting with your campus community.
+              Create an account today and start asking, answering, and connecting with your campus community.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/auth/register">
@@ -325,28 +505,24 @@ export default function LandingPage() {
             <div className="mb-8 md:mb-0">
               <h2 className="text-2xl font-bold mb-4 text-white">MinSU</h2>
               <p className="max-w-xs">
-                The ultimate marketplace and forum platform for Mindoro State University students.
+                The official forum platform for Mindoro State University students — ask questions, share knowledge, and grow together.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-gray-300">Marketplace</h3>
-                <ul className="space-y-2">
-                  <li><Link href="/marketplace" className="hover:text-white transition-colors">All Products</Link></li>
-                  <li><Link href="/marketplace/categories" className="hover:text-white transition-colors">Categories</Link></li>
-                  <li><Link href="/marketplace/deals" className="hover:text-white transition-colors">Hot Deals</Link></li>
-                </ul>
-              </div>
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-300">Forum</h3>
                 <ul className="space-y-2">
                   <li><Link href="/forum" className="hover:text-white transition-colors">All Questions</Link></li>
                   <li><Link href="/forum/topics" className="hover:text-white transition-colors">Popular Topics</Link></li>
-                  <li>
-                    <Link href="/forum/leaderboard" className="hover:text-white transition-colors">
-                      Leaderboard
-                    </Link>
-                  </li>
+                  <li><Link href="/forum/leaderboard" className="hover:text-white transition-colors">Leaderboard</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-300">Groups</h3>
+                <ul className="space-y-2">
+                  <li><Link href="/groups" className="hover:text-white transition-colors">All Groups</Link></li>
+                  <li><Link href="/groups/create" className="hover:text-white transition-colors">Create Group</Link></li>
+                  <li><Link href="/groups/joined" className="hover:text-white transition-colors">My Groups</Link></li>
                 </ul>
               </div>
               <div>
@@ -368,17 +544,10 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-gray-800 mt-10 pt-6 text-center text-gray-500">
-            <p>© 2025 Rumie. All rights reserved.</p>
+            <p>© 2025 MinSU. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
   )
 }
-
-
-
-      {/* Additional sections like Popular Items, Hot Topics, CTA, and Footer */}
-      
-      {/* Are preserved in your original structure and work exactly the same */}
-      {/* You can continue this pattern for them, or I can paste the rest too if needed */}
